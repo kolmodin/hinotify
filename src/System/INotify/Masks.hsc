@@ -18,6 +18,7 @@ module System.INotify.Masks
     , inIsdir
     , inOneshot
     , maskIsSet
+    , joinMasks
     , Mask
     ) where
 
@@ -32,16 +33,16 @@ data Mask
     | Extra     CUInt
     | Helper    CUInt
     | Special   CUInt
-    deriving Eq
+    deriving (Eq,Ord)
 
 maskIsSet :: Mask -> CUInt -> Bool
 maskIsSet mask cuint =
     value mask .&. cuint > 0
-    where
-    value (UserSpace i) = i
-    value (Extra i) = i
-    value (Helper i) = i
-    value (Special i) = i
+    
+value (UserSpace i) = i
+value (Extra i) = i
+value (Helper i) = i
+value (Special i) = i
 
 instance Show Mask where
     show mask =
@@ -64,6 +65,9 @@ instance Show Mask where
             (inMove, "IN_MOVE"),
             (inIsdir, "IN_ISDIR"),
             (inOneshot, "IN_ONESHOT")]
+
+joinMasks :: [Mask] -> CUInt
+joinMasks = foldr (.|.) 0 . map value
 
 #enum Mask, UserSpace, IN_ACCESS, IN_MODIFY, IN_ATTRIB, IN_CLOSE_WRITE
 #enum Mask, UserSpace, IN_CLOSE_NOWRITE, IN_OPEN, IN_MOVED_FROM, IN_MOVED_TO

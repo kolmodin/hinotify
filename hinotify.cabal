@@ -6,8 +6,10 @@ Homepage:
 Category:       
 Build-Depends:  base
 Synopsis:       Haskell binding to INotify
-Exposed-modules:
-    System.INotify
 Hs-Source-Dirs: src
 Extensions:     ForeignFunctionInterface
 Include-Dirs:   include
+Exposed-Modules:
+    System.INotify
+Other-Modules:
+    System.INotify.Masks

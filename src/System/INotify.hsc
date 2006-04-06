@@ -4,10 +4,11 @@
 -- Copyright   :  (c) Lennart Kolmodin 2006
 -- License     :  GPL
 -- Maintainer  :  kolmodin@dtek.chalmers.se
--- Stability   :  provisional
--- Portability :  x86 linux only
+-- Stability   :  experimental
+-- Portability :  hc portable, x86 linux only
 --
 -- A Haskell binding to INotify.
+-- See <http://www.kernel.org/pub/linux/kernel/people/rml/inotify/>.
 --
 -----------------------------------------------------------------------------
 
@@ -55,27 +56,34 @@ data WatchDescriptor = WatchDescriptor Handle WD deriving Eq
 data FDEvent = FDEvent WD Masks Cookie (Maybe String) deriving Show
 
 data Event = 
-    -- | A file was accessed
+    -- | A file was accessed. @Accessed isDirectory file@
       Accessed 
-        -- | Is a directory
         Bool
-        -- | The file
         (Maybe FilePath)
+    -- | A file was modified. @Modified isDiroctory file@
     | Modified    Bool (Maybe FilePath)
+    -- | A files attributs where changed. @Attributes isDirectory file@
     | Attributes  Bool (Maybe FilePath)
-    -- | A file was closed
+    -- | A file was closed. @Closed isDirectory wasWritable file@
     | Closed
-        Bool             -- ^ Is a directory
-        Bool             -- ^ Closed file was writable
-        (Maybe FilePath) -- ^ The file
+        Bool
+        Bool
+        (Maybe FilePath)
+    -- | A file was opened. @Opened isDirectory maybeFilePath@
     | Opened
         Bool
         (Maybe FilePath)
+    -- | A file was moved. @Moved isDirectory from to@
     | Moved Bool FilePath FilePath
+    -- | A file was created. @Created isDirectory file@
     | Created Bool FilePath
+    -- | A file was deleted. @Deleted isDirectory file@
     | Deleted Bool FilePath
+    -- | The file watched was deleted.
     | DeletedSelf
+    -- | The file watched was unmounted.
     | Unmounted
+    -- | The queue overflowed.
     | QOverflow
     | Ignored
     | Unknown FDEvent
@@ -90,10 +98,9 @@ data EventVariety
     | Move
     | Create
     | Delete Bool{-self-}
-    | Unmount
-    | OnlyDir
-    | NoSymlink
-    | MaskAdd
+    --    | OnlyDir
+    --    | NoSymlink
+    --    | MaskAdd
     | OneShot
     deriving Eq
 
@@ -116,15 +123,31 @@ inotify_init = do
 
 inotify_add_watch :: INotify -> [EventVariety] -> FilePath -> (Event -> IO ()) -> IO WatchDescriptor
 inotify_add_watch (INotify h fd em) masks fp cb = do
+    let mask = joinMasks (map eventVarietyToMask masks)
     em' <- takeMVar em
     wd <- withCString fp $ \fp_c ->
-              c_inotify_add_watch (fromIntegral fd) fp_c (maxBound :: CUInt)
+              c_inotify_add_watch (fromIntegral fd) fp_c mask
     let event = \e -> do
             when (OneShot `elem` masks) $
               modifyMVar_ em (return . Map.delete wd)
             cb e
     putMVar em (Map.insert wd event em')
     return (WatchDescriptor h wd)
+    where
+    eventVarietyToMask ev =
+        case ev of
+            Access -> inAccess
+            Modify -> inModify
+            Attrib -> inAttrib
+            Close True -> inCloseWrite
+            Close False -> inCloseNowrite
+            Open -> inOpen
+            Move -> inMove
+            Create -> inCreate
+            Delete True -> inDeleteSelf
+            Delete False -> inDelete
+            OneShot -> inOneshot
+            
 
 inotify_rm_watch :: INotify -> WatchDescriptor -> IO ()
 inotify_rm_watch (INotify _ fd em) (WatchDescriptor _ wd) = do
