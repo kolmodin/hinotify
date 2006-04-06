@@ -223,7 +223,6 @@ inotify_start_thread h em = do
     start_thread = do
         let loop queue = do
             (events, queue') <- read_events h queue
-            putStrLn $ show (length events) ++ " events read"
             mapM_ runHandler events
             loop queue'
         loop []
@@ -232,7 +231,8 @@ inotify_start_thread h em = do
         handlers <- readMVar em
         let handlerM = Map.lookup wd handlers
         case handlerM of
-          Nothing -> putStrLn "runHandler: couldn't find handler" --impossible?
+          Nothing -> putStrLn "runHandler: couldn't find handler" -- impossible?
+                                                                  -- no.  qoverflow has wd=-1
           Just handler -> handler event
         
 
