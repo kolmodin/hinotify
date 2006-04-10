@@ -239,7 +239,9 @@ inotify_start_thread h em = do
 -- TODO:
 -- Until I get the compilation right, this is a workaround.
 -- The preferred way is to used the commented out code, but I can't get it
--- to compile.
+-- to link.
+-- Loading package HINotify-0.1 ... linking ... ghc-6.4.1: /usr/local/lib/HINotify-0.1/ghc-6.4.1/HSHINotify-0.1.o: unknown symbol `inotify_rm_watch'
+
 
 {-
 foreign import ccall unsafe "inotify-syscalls.h inotify_init" c_inotify_init :: IO CInt
