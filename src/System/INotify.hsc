@@ -14,7 +14,7 @@
 -- add a watch on a file or directory. Select which events you're interested
 -- in with 'EventVariety', which corresponds to the 'Event' events.
 -- 
--- Use 'inotify_rm_watch' once you don't want to watch an event any more.
+-- Use 'inotify_rm_watch' once you don't want to watch a file any more.
 --
 -----------------------------------------------------------------------------
 
@@ -177,8 +177,11 @@ inotify_add_watch (INotify h fd em) masks fp cb = do
             Create -> inCreate
             Delete -> inDelete
             DeleteSelf-> inDeleteSelf
+            OnlyDir -> inOnlydir
+            NoSymlink -> inDontFollow
+            MaskAdd -> inMaskAdd
             OneShot -> inOneshot
-            AllEvents -> inAllMask
+            AllEvents -> inAllEvents
 
 inotify_rm_watch :: INotify -> WatchDescriptor -> IO ()
 inotify_rm_watch (INotify _ fd em) (WatchDescriptor _ wd) = do
@@ -211,7 +214,7 @@ read_events h =
                -> WDEvent
     interprete fdevent@(FDEvent wd _ _ _)
         = (wd, interprete' fdevent)
-    interprete' fdevent@(FDEvent _ mask cookie nameM)
+    interprete' fdevent@(FDEvent _ mask _cookie nameM)
         | isSet inAccess     = Accessed isDir nameM
         | isSet inModify     = Modified isDir nameM
         | isSet inAttrib     = Attributes isDir nameM

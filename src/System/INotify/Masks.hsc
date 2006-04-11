@@ -16,9 +16,12 @@ module System.INotify.Masks
     , inIgnored
     , inClose
     , inMove
+    , inOnlydir
+    , inDontFollow
+    , inMaskAdd
     , inIsdir
     , inOneshot
-    , inAllMask
+    , inAllEvents
     , maskIsSet
     , joinMasks
     , Mask
@@ -35,16 +38,19 @@ data Mask
     | Extra     CUInt
     | Helper    CUInt
     | Special   CUInt
+    | All       CUInt
     deriving (Eq,Ord)
 
 maskIsSet :: Mask -> CUInt -> Bool
 maskIsSet mask cuint =
     value mask .&. cuint > 0
     
+value :: Mask -> CUInt
 value (UserSpace i) = i
 value (Extra i) = i
 value (Helper i) = i
 value (Special i) = i
+value (All i) = i
 
 instance Show Mask where
     show mask =
@@ -52,11 +58,14 @@ instance Show Mask where
             (inAccess, "IN_ACCESS"),
             (inModify, "IN_MODIFY"),
             (inAttrib, "IN_ATTRIB"),
+            (inClose,  "IN_CLOSE"),
             (inCloseWrite, "IN_CLOSE_WRITE"),
             (inCloseNowrite, "IN_CLOSE_NOWRITE"),
             (inOpen, "IN_OPEN"),
+            (inMove, "IN_MOVE"),
             (inMovedFrom, "IN_MOVED_FROM"),
             (inMovedTo, "IN_MOVED_TO"),
+            (inMoveSelf, "IN_MOVE_SELF"),
             (inCreate, "IN_CREATE"),
             (inDelete, "IN_DELETE"),
             (inDeleteSelf, "IN_DELETE_SELF"),
@@ -64,14 +73,11 @@ instance Show Mask where
             (inQOverflow, "IN_Q_OVERFLOW"),
             (inIgnored, "IN_IGNORED"),
             (inClose, "IN_CLOSE"),
-            (inMove, "IN_MOVE"),
             (inIsdir, "IN_ISDIR"),
             (inOneshot, "IN_ONESHOT")]
 
 joinMasks :: [Mask] -> CUInt
 joinMasks = foldr (.|.) 0 . map value
-
-inAllMask = Special maxBound
 
 #enum Mask, UserSpace, IN_ACCESS, IN_MODIFY, IN_ATTRIB, IN_CLOSE_WRITE
 #enum Mask, UserSpace, IN_CLOSE_NOWRITE, IN_OPEN, IN_MOVED_FROM, IN_MOVED_TO
@@ -81,7 +87,10 @@ inAllMask = Special maxBound
 
 #enum Mask, Helper, IN_CLOSE, IN_MOVE
 
-#enum Mask, Special, IN_ISDIR, IN_ONESHOT
+#enum Mask, Special, IN_ONLYDIR, IN_DONT_FOLLOW, IN_MASK_ADD, IN_ISDIR
+#enum Mask, Special, IN_ONESHOT
+
+#enum Mask, All, IN_ALL_EVENTS
 
 {-
 /* the following are legal, implemented events that user-space can watch for */
@@ -96,6 +105,7 @@ inAllMask = Special maxBound
 #define IN_CREATE               0x00000100      /* Subfile was created */
 #define IN_DELETE               0x00000200      /* Subfile was deleted */
 #define IN_DELETE_SELF          0x00000400      /* Self was deleted */
+#define IN_MOVE_SELF            0x00000800      /* Self was moved */
 
 /* the following are legal events.  they are sent as needed to any watch */
 #define IN_UNMOUNT              0x00002000      /* Backing fs was unmounted */
@@ -107,6 +117,9 @@ inAllMask = Special maxBound
 #define IN_MOVE                 (IN_MOVED_FROM | IN_MOVED_TO) /* moves */
 
 /* special flags */
+#define IN_ONLYDIR              0x01000000      /* only watch the path if it is a directory */
+#define IN_DONT_FOLLOW          0x02000000      /* don't follow a sym link */
+#define IN_MASK_ADD             0x20000000      /* add to the mask of an already existing w atch */
 #define IN_ISDIR                0x40000000      /* event occurred against dir */
 #define IN_ONESHOT              0x80000000      /* only send event once */
 -}
