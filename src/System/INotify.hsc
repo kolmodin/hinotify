@@ -35,9 +35,10 @@ import Foreign.C
 import Foreign.Marshal
 import Foreign.Ptr
 import Foreign.Storable
+import System.Directory
 import System.IO
+import System.IO.Error
 import System.Posix.Internals
-import Prelude hiding (lookup)
 
 import System.INotify.Masks
 
@@ -46,7 +47,6 @@ type WD = CInt
 type Cookie = CUInt
 type Masks = CUInt
 
-type WDEventQueue = [(Cookie, FDEvent -> Event)]
 type EventMap = Map WD (Event -> IO ())
 type WDEvent = (WD, Event)
 
@@ -62,7 +62,7 @@ data Event =
         (Maybe FilePath)
     -- | A file was modified. @Modified isDiroctory file@
     | Modified    Bool (Maybe FilePath)
-    -- | A files attributs where changed. @Attributes isDirectory file@
+    -- | A files attributes where changed. @Attributes isDirectory file@
     | Attributes  Bool (Maybe FilePath)
     -- | A file was closed. @Closed isDirectory wasWritable file@
     | Closed
@@ -73,8 +73,12 @@ data Event =
     | Opened
         Bool
         (Maybe FilePath)
-    -- | A file was moved. @Moved isDirectory from to@
-    | Moved Bool FilePath FilePath
+    -- | A file was moved away from the watched dir. @MovedFrom isDirectory from@
+    | MovedOut Bool FilePath
+    -- | A file was moved into the watched dir. MovedTo isDirectory to@
+    | MovedIn  Bool FilePath
+    -- | The watched file was moved. @MovedSelf isDirectory@
+    | MovedSelf Bool
     -- | A file was created. @Created isDirectory file@
     | Created Bool FilePath
     -- | A file was deleted. @Deleted isDirectory file@
@@ -93,15 +97,22 @@ data EventVariety
     = Access
     | Modify
     | Attrib
-    | Close Bool{-write-}
+    | Close
+    | CloseWrite
+    | CloseNoWrite
     | Open
     | Move
+    | MoveIn
+    | MoveOut
+    | MoveSelf
     | Create
-    | Delete Bool{-self-}
-    --    | OnlyDir
-    --    | NoSymlink
-    --    | MaskAdd
+    | Delete
+    | DeleteSelf
+    | OnlyDir
+    | NoSymlink
+    | MaskAdd
     | OneShot
+    | AllEvents
     deriving Eq
 
 instance Show INotify where
@@ -123,6 +134,16 @@ inotify_init = do
 
 inotify_add_watch :: INotify -> [EventVariety] -> FilePath -> (Event -> IO ()) -> IO WatchDescriptor
 inotify_add_watch (INotify h fd em) masks fp cb = do
+    is_dir <- doesDirectoryExist fp
+    when (not is_dir) $ do
+        file_exist <- doesFileExist fp
+        when (not file_exist) $ do
+            -- it's not a directory, and not a file...
+            -- it doesn't exist
+            ioError $ mkIOError doesNotExistErrorType
+                                "can't watch what isn't there"
+                                Nothing 
+                                (Just fp)
     let mask = joinMasks (map eventVarietyToMask masks)
     em' <- takeMVar em
     wd <- withCString fp $ \fp_c ->
@@ -139,32 +160,36 @@ inotify_add_watch (INotify h fd em) masks fp cb = do
             Access -> inAccess
             Modify -> inModify
             Attrib -> inAttrib
-            Close True -> inCloseWrite
-            Close False -> inCloseNowrite
+            Close -> inClose
+            CloseWrite -> inCloseWrite
+            CloseNoWrite -> inCloseNowrite
             Open -> inOpen
             Move -> inMove
+            MoveIn -> inMovedTo
+            MoveOut -> inMovedFrom
+            MoveSelf -> inMoveSelf
             Create -> inCreate
-            Delete True -> inDeleteSelf
-            Delete False -> inDelete
+            Delete -> inDelete
+            DeleteSelf-> inDeleteSelf
             OneShot -> inOneshot
-            
+            AllEvents -> inAllMask
 
 inotify_rm_watch :: INotify -> WatchDescriptor -> IO ()
 inotify_rm_watch (INotify _ fd em) (WatchDescriptor _ wd) = do
     c_inotify_rm_watch (fromIntegral fd) wd
     modifyMVar_ em (return . Map.delete wd)
 
-read_events :: Handle -> WDEventQueue -> IO ([WDEvent], WDEventQueue)
-read_events h wdEventQueue = 
+read_events :: Handle -> IO [WDEvent]
+read_events h = 
     let maxRead = 16385 in
     allocaBytes maxRead $ \buffer -> do
         hWaitForInput h (-1)  -- wait forever
         r <- hGetBufNonBlocking h buffer maxRead
-        read_events' buffer r wdEventQueue
+        read_events' buffer r
     where
-    read_events' :: Ptr a -> Int -> WDEventQueue -> IO ([WDEvent], WDEventQueue)
-    read_events' _ r q |  r <= 0 = return ([], q)
-    read_events' ptr r queue = do
+    read_events' :: Ptr a -> Int -> IO [WDEvent]
+    read_events' _ r |  r <= 0 = return []
+    read_events' ptr r = do
         wd     <- (#peek struct inotify_event, wd)     ptr :: IO CInt
         mask   <- (#peek struct inotify_event, mask)   ptr :: IO CUInt
         cookie <- (#peek struct inotify_event, cookie) ptr :: IO CUInt
@@ -173,59 +198,51 @@ read_events h wdEventQueue =
                     then return Nothing
                     else fmap Just $ peekCString ((#ptr struct inotify_event, name) ptr)
         let event_size = (#size struct inotify_event) + (fromIntegral len) 
-            event = (FDEvent wd mask cookie nameM)
-            (eventM,queue') = connectEvents queue event
-        (rest, queue'') <- read_events' (ptr `plusPtr` event_size) (r - event_size) queue'
-        return . flip (,) queue'' $ maybe rest (:rest) eventM
-    connectEvents :: WDEventQueue
-                  -> FDEvent 
-                  -> (Maybe WDEvent, WDEventQueue)
-    connectEvents queue fdevent@(FDEvent wd mask cookie nameM)
-        | isSet inAccess = only $ Accessed (isSet inIsdir) nameM
-        | isSet inModify = only $ Modified (isSet inIsdir) nameM
-        | isSet inAttrib = only $ Attributes (isSet inIsdir) nameM
-        | isSet inClose  = only $ Closed (isSet inIsdir) (isSet inCloseWrite) nameM
-        | isSet inOpen   = only $ Opened (isSet inIsdir) nameM
-        | isSet inMovedFrom = intoQ $ \(FDEvent _ _ _ (Just nameTo)) ->
-            -- the parameter is the other event with the same cookie
-            Moved (isSet inIsdir) name nameTo
-        | isSet inMovedTo = joinWithQ
-        | isSet inCreate = only $ Created (isSet inIsdir) name
-        | isSet inDelete = only $ Deleted (isSet inIsdir) name
-        | isSet inDeleteSelf = only DeletedSelf
-        | isSet inUnmount = only Unmounted
-        | isSet inQOverflow = only QOverflow
-        | isSet inIgnored = only Ignored
-        | otherwise = only $ Unknown fdevent
+            event = interprete (FDEvent wd mask cookie nameM)
+        rest <- read_events' (ptr `plusPtr` event_size) (r - event_size)
+        return (event:rest)
+    interprete :: FDEvent 
+               -> WDEvent
+    interprete fdevent@(FDEvent wd _ _ _)
+        = (wd, interprete' fdevent)
+    interprete' fdevent@(FDEvent _ mask cookie nameM)
+        | isSet inAccess     = Accessed isDir nameM
+        | isSet inModify     = Modified isDir nameM
+        | isSet inAttrib     = Attributes isDir nameM
+        | isSet inClose      = Closed isDir (isSet inCloseWrite) nameM
+        | isSet inOpen       = Opened isDir nameM
+        | isSet inMovedFrom  = MovedOut isDir name
+        | isSet inMovedTo    = MovedIn isDir name
+        | isSet inMoveSelf   = MovedSelf isDir
+        | isSet inCreate     = Created isDir name
+        | isSet inDelete     = Deleted isDir name
+        | isSet inDeleteSelf = DeletedSelf
+        | isSet inUnmount    = Unmounted
+        | isSet inQOverflow  = QOverflow
+        | isSet inIgnored    = Ignored
+        | otherwise          = Unknown fdevent
         where
-        only :: Event -> (Maybe WDEvent, WDEventQueue)
-        only e = (Just $ (wd, e), queue)
-        intoQ :: (FDEvent -> Event) -> (Maybe WDEvent, WDEventQueue)
-        intoQ eWait = (Nothing, (cookie, eWait):queue)
-        joinWithQ :: (Maybe WDEvent, WDEventQueue)
-        joinWithQ =
-            let (Just e, queue') = lookupAndDelete cookie queue
-            in (Just (wd, e fdevent), queue')
+        isDir = isSet inIsdir
         isSet bits = maskIsSet bits mask
         name = fromJust nameM
-        lookupAndDelete _ [] = (Nothing, [])
-        lookupAndDelete k' ((x@(k,v)):xs)
-            | k == k' = (Just v, xs)
-            | otherwise = let (v',xs') = lookupAndDelete k' xs in (v', x:xs')
-        
        
 inotify_start_thread :: Handle -> MVar EventMap -> IO ()
 inotify_start_thread h em = do
-    forkIO start_thread
+    chan_events <- newChan
+    forkIO (dispatcher chan_events)
+    forkIO (start_thread chan_events)
     return ()
     where
-    start_thread :: IO ()
-    start_thread = do
-        let loop queue = do
-            (events, queue') <- read_events h queue
-            mapM_ runHandler events
-            loop queue'
-        loop []
+    start_thread :: Chan [WDEvent] -> IO ()
+    start_thread chan_events = do
+        events <- read_events h
+        writeChan chan_events events
+        start_thread chan_events
+    dispatcher :: Chan [WDEvent] -> IO ()
+    dispatcher chan_events = do
+        events <- readChan chan_events
+        mapM_ runHandler events
+        dispatcher chan_events
     runHandler :: WDEvent -> IO ()
     runHandler (wd, event) = do 
         handlers <- readMVar em
@@ -239,7 +256,7 @@ inotify_start_thread h em = do
 -- TODO:
 -- Until I get the compilation right, this is a workaround.
 -- The preferred way is to used the commented out code, but I can't get it
--- to link.
+-- to link. As a consequence, the library only works for x86 linux.
 -- Loading package HINotify-0.1 ... linking ... ghc-6.4.1: /usr/local/lib/HINotify-0.1/ghc-6.4.1/HSHINotify-0.1.o: unknown symbol `inotify_rm_watch'
 
 

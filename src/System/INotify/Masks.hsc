@@ -7,6 +7,7 @@ module System.INotify.Masks
     , inOpen
     , inMovedFrom
     , inMovedTo
+    , inMoveSelf
     , inCreate
     , inDelete
     , inDeleteSelf
@@ -17,6 +18,7 @@ module System.INotify.Masks
     , inMove
     , inIsdir
     , inOneshot
+    , inAllMask
     , maskIsSet
     , joinMasks
     , Mask
@@ -69,9 +71,11 @@ instance Show Mask where
 joinMasks :: [Mask] -> CUInt
 joinMasks = foldr (.|.) 0 . map value
 
+inAllMask = Special maxBound
+
 #enum Mask, UserSpace, IN_ACCESS, IN_MODIFY, IN_ATTRIB, IN_CLOSE_WRITE
 #enum Mask, UserSpace, IN_CLOSE_NOWRITE, IN_OPEN, IN_MOVED_FROM, IN_MOVED_TO
-#enum Mask, UserSpace, IN_CREATE, IN_DELETE, IN_DELETE_SELF
+#enum Mask, UserSpace, IN_CREATE, IN_DELETE, IN_DELETE_SELF, IN_MOVE_SELF
 
 #enum Mask, Extra, IN_UNMOUNT, IN_Q_OVERFLOW, IN_IGNORED
 
