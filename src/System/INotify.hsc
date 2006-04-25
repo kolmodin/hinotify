@@ -26,6 +26,7 @@ module System.INotify
     , WatchDescriptor
     , Event(..)
     , EventVariety(..)
+    , Cookie
     ) where
 
 #include "inotify.h"
@@ -50,7 +51,6 @@ import System.INotify.Masks
 
 type FD = CInt
 type WD = CInt
-type Cookie = CUInt
 type Masks = CUInt
 
 type EventMap = Map WD (Event -> IO ())
@@ -59,7 +59,9 @@ type WDEvent = (WD, Event)
 data INotify = INotify Handle FD (MVar EventMap)
 data WatchDescriptor = WatchDescriptor Handle WD deriving Eq
 
-data FDEvent = FDEvent WD Masks Cookie (Maybe String) deriving Show
+newtype Cookie = Cookie CUInt deriving (Eq,Ord)
+
+data FDEvent = FDEvent WD Masks CUInt{-Cookie-} (Maybe String) deriving Show
 
 data Event = 
     -- | A file was accessed. @Accessed isDirectory file@
@@ -80,9 +82,9 @@ data Event =
         Bool
         (Maybe FilePath)
     -- | A file was moved away from the watched dir. @MovedFrom isDirectory from@
-    | MovedOut Bool FilePath
+    | MovedOut Bool Cookie FilePath
     -- | A file was moved into the watched dir. MovedTo isDirectory to@
-    | MovedIn  Bool FilePath
+    | MovedIn  Bool Cookie FilePath
     -- | The watched file was moved. @MovedSelf isDirectory@
     | MovedSelf Bool
     -- | A file was created. @Created isDirectory file@
@@ -128,6 +130,9 @@ instance Show INotify where
 
 instance Show WatchDescriptor where
     show (WatchDescriptor _ wd) = showString "<wd=" . shows wd $ ">"
+
+instance Show Cookie where
+    show (Cookie c) = showString "<cookie " . shows c $ ">"
 
 inotify_init :: IO INotify
 inotify_init = do
@@ -214,14 +219,14 @@ read_events h =
                -> WDEvent
     interprete fdevent@(FDEvent wd _ _ _)
         = (wd, interprete' fdevent)
-    interprete' fdevent@(FDEvent _ mask _cookie nameM)
+    interprete' fdevent@(FDEvent _ mask cookie nameM)
         | isSet inAccess     = Accessed isDir nameM
         | isSet inModify     = Modified isDir nameM
         | isSet inAttrib     = Attributes isDir nameM
         | isSet inClose      = Closed isDir (isSet inCloseWrite) nameM
         | isSet inOpen       = Opened isDir nameM
-        | isSet inMovedFrom  = MovedOut isDir name
-        | isSet inMovedTo    = MovedIn isDir name
+        | isSet inMovedFrom  = MovedOut isDir (Cookie cookie) name
+        | isSet inMovedTo    = MovedIn isDir (Cookie cookie) name
         | isSet inMoveSelf   = MovedSelf isDir
         | isSet inCreate     = Created isDir name
         | isSet inDelete     = Deleted isDir name
