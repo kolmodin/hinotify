@@ -261,33 +261,6 @@ inotify_start_thread h em = do
                                                                   -- no.  qoverflow has wd=-1
           Just handler -> handler event
         
-
--- TODO:
--- Until I get the compilation right, this is a workaround.
--- The preferred way is to used the commented out code, but I can't get it
--- to link. As a consequence, the library only works for x86 linux.
--- Loading package HINotify-0.1 ... linking ... ghc-6.4.1: /usr/local/lib/HINotify-0.1/ghc-6.4.1/HSHINotify-0.1.o: unknown symbol `inotify_rm_watch'
-
-
-{-
 foreign import ccall unsafe "inotify-syscalls.h inotify_init" c_inotify_init :: IO CInt
 foreign import ccall unsafe "inotify-syscalls.h inotify_add_watch" c_inotify_add_watch :: CInt -> CString -> CUInt -> IO CInt
 foreign import ccall unsafe "inotify-syscalls.h inotify_rm_watch" c_inotify_rm_watch :: CInt -> CInt -> IO CInt
--}
-
-c_inotify_init :: IO CInt
-c_inotify_init = syscall1 __NR_inotify_init
-
-c_inotify_add_watch :: CInt -> CString -> CUInt -> IO CInt
-c_inotify_add_watch = syscall4 __NR_inotify_add_watch
-
-c_inotify_rm_watch :: CInt -> CInt -> IO CInt
-c_inotify_rm_watch = syscall3 __NR_inotify_rm_watch
-
-__NR_inotify_init      = 291
-__NR_inotify_add_watch = 292
-__NR_inotify_rm_watch  = 293
-
-foreign import ccall "syscall" syscall1 :: CInt -> IO CInt
-foreign import ccall "syscall" syscall3 :: CInt -> CInt -> CInt -> IO CInt
-foreign import ccall "syscall" syscall4 :: CInt -> CInt -> CString -> CUInt -> IO CInt

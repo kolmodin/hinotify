@@ -13,3 +13,4 @@ Exposed-Modules:
     System.INotify
 Other-Modules:
     System.INotify.Masks
+Ghc-Options:    -fvia-C
