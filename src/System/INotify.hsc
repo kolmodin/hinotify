@@ -194,7 +194,7 @@ inotify_add_watch inotify@(INotify h fd em) masks fp cb = do
             AllEvents -> inAllEvents
 
 inotify_rm_watch :: INotify -> WatchDescriptor -> IO ()
-inotify_rm_watch (INotify _ fd em) (WatchDescriptor _ wd) = do
+inotify_rm_watch (INotify _ fd _) (WatchDescriptor _ wd) = do
     c_inotify_rm_watch (fromIntegral fd) wd
     return ()
 
@@ -267,13 +267,16 @@ inotify_start_thread h em = do
         mapM_ runHandler events
         dispatcher chan_events
     runHandler :: WDEvent -> IO ()
+    runHandler (_,  e@QOverflow) = do -- send overflows to all handlers
+        handlers <- readMVar em
+        flip mapM_ (Map.elems handlers) $ \handler ->
+            catch (handler e) (\_ -> return ()) -- supress errors
     runHandler (wd, event) = do 
         handlers <- readMVar em
         let handlerM = Map.lookup wd handlers
         case handlerM of
           Nothing -> putStrLn "runHandler: couldn't find handler" -- impossible?
-                                                                  -- no.  qoverflow has wd=-1
-          Just handler -> handler event
+          Just handler -> catch (handler event) (\_ -> return ())
         
 foreign import ccall unsafe "inotify-syscalls.h inotify_init" c_inotify_init :: IO CInt
 foreign import ccall unsafe "inotify-syscalls.h inotify_add_watch" c_inotify_add_watch :: CInt -> CString -> CUInt -> IO CInt
