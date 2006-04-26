@@ -144,7 +144,7 @@ inotify_init = do
     return (INotify h fd em)
 
 inotify_add_watch :: INotify -> [EventVariety] -> FilePath -> (Event -> IO ()) -> IO WatchDescriptor
-inotify_add_watch (INotify h fd em) masks fp cb = do
+inotify_add_watch inotify@(INotify h fd em) masks fp cb = do
     is_dir <- doesDirectoryExist fp
     when (not is_dir) $ do
         file_exist <- doesFileExist fp
@@ -161,7 +161,12 @@ inotify_add_watch (INotify h fd em) masks fp cb = do
               c_inotify_add_watch (fromIntegral fd) fp_c mask
     let event = \e -> do
             when (OneShot `elem` masks) $
-              modifyMVar_ em (return . Map.delete wd)
+              rm_watch inotify wd
+            case e of
+              -- if the event is Ignored then we know for sure that
+              -- this is the last event on that WatchDescriptor
+              Ignored -> rm_watch inotify wd
+              _       -> return ()
             cb e
     putMVar em (Map.insert wd event em')
     return (WatchDescriptor h wd)
@@ -191,6 +196,10 @@ inotify_add_watch (INotify h fd em) masks fp cb = do
 inotify_rm_watch :: INotify -> WatchDescriptor -> IO ()
 inotify_rm_watch (INotify _ fd em) (WatchDescriptor _ wd) = do
     c_inotify_rm_watch (fromIntegral fd) wd
+    return ()
+
+rm_watch :: INotify -> WD -> IO ()
+rm_watch (INotify _ _ em) wd =
     modifyMVar_ em (return . Map.delete wd)
 
 read_events :: Handle -> IO [WDEvent]
