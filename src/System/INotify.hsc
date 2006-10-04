@@ -222,30 +222,30 @@ read_events h =
                     then return Nothing
                     else fmap Just $ peekCString ((#ptr struct inotify_event, name) ptr)
         let event_size = (#size struct inotify_event) + (fromIntegral len) 
-            event = interprete (FDEvent wd mask cookie nameM)
+            event = cEvent2Haskell (FDEvent wd mask cookie nameM)
         rest <- read_events' (ptr `plusPtr` event_size) (r - event_size)
         return (event:rest)
-    interprete :: FDEvent 
+    cEvent2Haskell :: FDEvent 
                -> WDEvent
-    interprete fdevent@(FDEvent wd _ _ _)
-        = (wd, interprete' fdevent)
-    interprete' fdevent@(FDEvent _ mask cookie nameM)
-        | isSet inAccess     = Accessed isDir nameM
-        | isSet inModify     = Modified isDir nameM
-        | isSet inAttrib     = Attributes isDir nameM
-        | isSet inClose      = Closed isDir (isSet inCloseWrite) nameM
-        | isSet inOpen       = Opened isDir nameM
-        | isSet inMovedFrom  = MovedOut isDir (Cookie cookie) name
-        | isSet inMovedTo    = MovedIn isDir (Cookie cookie) name
-        | isSet inMoveSelf   = MovedSelf isDir
-        | isSet inCreate     = Created isDir name
-        | isSet inDelete     = Deleted isDir name
-        | isSet inDeleteSelf = DeletedSelf
-        | isSet inUnmount    = Unmounted
-        | isSet inQOverflow  = QOverflow
-        | isSet inIgnored    = Ignored
-        | otherwise          = Unknown fdevent
+    cEvent2Haskell fdevent@(FDEvent wd mask cookie nameM)
+        = (wd, event)
         where
+        event
+            | isSet inAccess     = Accessed isDir nameM
+            | isSet inModify     = Modified isDir nameM
+            | isSet inAttrib     = Attributes isDir nameM
+            | isSet inClose      = Closed isDir (isSet inCloseWrite) nameM
+            | isSet inOpen       = Opened isDir nameM
+            | isSet inMovedFrom  = MovedOut isDir (Cookie cookie) name
+            | isSet inMovedTo    = MovedIn isDir (Cookie cookie) name
+            | isSet inMoveSelf   = MovedSelf isDir
+            | isSet inCreate     = Created isDir name
+            | isSet inDelete     = Deleted isDir name
+            | isSet inDeleteSelf = DeletedSelf
+            | isSet inUnmount    = Unmounted
+            | isSet inQOverflow  = QOverflow
+            | isSet inIgnored    = Ignored
+            | otherwise          = Unknown fdevent
         isDir = isSet inIsdir
         isSet bits = maskIsSet bits mask
         name = fromJust nameM
