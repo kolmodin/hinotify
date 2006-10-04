@@ -8,7 +8,8 @@
 -- Portability :  hc portable, x86 linux only
 --
 -- A Haskell binding to INotify.
--- See <http://www.kernel.org/pub/linux/kernel/people/rml/inotify/>.
+-- See <http://www.kernel.org/pub/linux/kernel/people/rml/inotify/> and @man
+-- inotify@.
 --
 -- Use 'inotify_init' to get a 'INotify', then use 'inotify_add_watch' to
 -- add a watch on a file or directory. Select which events you're interested
@@ -83,7 +84,7 @@ data Event =
         (Maybe FilePath)
     -- | A file was moved away from the watched dir. @MovedFrom isDirectory from@
     | MovedOut Bool Cookie FilePath
-    -- | A file was moved into the watched dir. MovedTo isDirectory to@
+    -- | A file was moved into the watched dir. @MovedTo isDirectory to@
     | MovedIn  Bool Cookie FilePath
     -- | The watched file was moved. @MovedSelf isDirectory@
     | MovedSelf Bool
