@@ -5,7 +5,7 @@
 -- License     :  GPL
 -- Maintainer  :  kolmodin@dtek.chalmers.se
 -- Stability   :  experimental
--- Portability :  hc portable, x86 linux only
+-- Portability :  hc portable, linux only
 --
 -- A Haskell binding to INotify.
 -- See <http://www.kernel.org/pub/linux/kernel/people/rml/inotify/> and @man
