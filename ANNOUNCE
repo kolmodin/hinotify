@@ -1,0 +1,58 @@
+Greetings!
+
+I'm pleased to announce hinotify 0.1, a library to inotify[1] which has
+been part of the Linux kernel since 2.6.13.
+
+inotify provides file system event notification, simply add a watcher to
+a file or directory and get an event when it is accessed or modified.
+
+The API basically consists of:
+
+inotify_init :: IO INotify
+inotify_add_watch :: INotify
+                  -> [EventVariety]   -- different events to listen on
+                  -> FilePath         -- file/directory to watch
+                  -> (Event -> IO ()) -- event handler
+                  -> IO WatchDescriptor
+inotify_rm_watch :: INotify -> WatchDescriptor -> IO ()
+
+A sample program:
+
+> import System.Directory
+> import System.IO
+>
+> import System.INotify
+>
+> main :: IO ()
+> main = do
+>     inotify <- inotify_init
+>     print inotify
+>     home <- getHomeDirectory
+>     wd <- inotify_add_watch inotify
+>                             [Open,Close,Access,Modify,Move]
+>                             home
+>                             print
+>     print wd
+>     putStrLn "Listens to your home directory. Hit enter to terminate."
+>     getLine
+>     inotify_rm_watch inotify wd
+
+The code is available via www:
+
+http://haskell.org/~kolmodin/code/hinotify/download/hinotify-0.1.tar.gz
+
+and via darcs:
+
+  darcs get http://haskell.org/~kolmodin/code/hinotify/
+
+The API is available at:
+
+  http://haskell.org/~kolmodin/code/hinotify/docs/api/
+
+The library is very young and I'm most grateful for feedback on the API,
+and what else you might have to suggest.
+
+Cheers,
+  Lennart Kolmodin
+
+[1] http://www.kernel.org/pub/linux/kernel/people/rml/inotify/
