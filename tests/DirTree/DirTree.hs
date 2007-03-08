@@ -1,12 +1,10 @@
-{- 
-Duncan Coutts 2006
-
-Doesn't compile with gtk2hs 0.9.10, you'll need the darcs version.
-
--}
+-- Duncan Coutts 2006-2007
+-- Requires gtk2hs 0.9.11
 
 import qualified Data.Map as Map
 import System.Directory
+import System.Environment
+import Control.Concurrent
 
 import Data.IORef
 import Control.Monad (liftM)
@@ -14,13 +12,13 @@ import Ix (inRange)
 
 import System.INotify
 
-import Graphics.UI.Gtk
-import Graphics.UI.Gtk.TreeList.Types (TypedTreeModelClass)
-import Graphics.UI.Gtk.TreeList.TreeModel (TreeModelFlags(TreeModelListOnly))
-import Graphics.UI.Gtk.TreeList.CustomStore
+import Graphics.UI.Gtk hiding (TreeModelFlags(TreeModelListOnly), cellText)
+import Graphics.UI.Gtk.ModelView.CellLayout
+import Graphics.UI.Gtk.ModelView.Types (TypedTreeModelClass)
+import Graphics.UI.Gtk.ModelView.TreeModel (TreeModelFlags(TreeModelListOnly))
+import Graphics.UI.Gtk.ModelView.CellRendererText (cellText)
+import Graphics.UI.Gtk.ModelView.CustomStore
 import Graphics.UI.Gtk.TreeList.TreeIter
-
-import Control.Concurrent
 
 instance TypedTreeModelClass (CustomTreeModel a)
 
@@ -76,8 +74,8 @@ dirModelNew path = do
      in case event of
           MovedIn  _ _ file -> add file
           MovedOut _ _ file -> remove file
-          Created  _ file -> add file
-          Deleted  _ file -> remove file
+          Created    _ file -> add file
+          Deleted    _ file -> remove file
           _ -> putStrLn $ "other event: " ++ show event
 
   -- TODO: on destroy model (inotify_rm_watch watch)
@@ -86,10 +84,16 @@ dirModelNew path = do
 
 main = do
   initGUI
+
   win <- windowNew
   win `onDestroy` mainQuit
 
-  model <- dirModelNew "/home/kolmodin/Desktop"
+  args <- getArgs
+  let dir = case args of
+              [d] -> d
+	      _   -> "."
+
+  model <- dirModelNew dir
 
   tv <- treeViewNewWithModel model
   win `containerAdd` tv
