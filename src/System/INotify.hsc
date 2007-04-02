@@ -137,7 +137,7 @@ instance Show Cookie where
 
 inotify_init :: IO INotify
 inotify_init = do
-    fd <- c_inotify_init
+    fd <- throwErrnoIfMinus1 "inotify_init" c_inotify_init
     em <- newMVar Map.empty
     let desc = showString "<inotify handle, fd=" . shows fd $ ">"
     h <- openFd (fromIntegral fd) (Just Stream) False{-is_socket-} desc ReadMode True{-binary-}
@@ -159,6 +159,7 @@ inotify_add_watch inotify@(INotify h fd em) masks fp cb = do
     let mask = joinMasks (map eventVarietyToMask masks)
     em' <- takeMVar em
     wd <- withCString fp $ \fp_c ->
+	    throwErrnoIfMinus1 "inotify_add_watch" $
               c_inotify_add_watch (fromIntegral fd) fp_c mask
     let event = \e -> do
             when (OneShot `elem` masks) $
@@ -196,7 +197,8 @@ inotify_add_watch inotify@(INotify h fd em) masks fp cb = do
 
 inotify_rm_watch :: INotify -> WatchDescriptor -> IO ()
 inotify_rm_watch (INotify _ fd _) (WatchDescriptor _ wd) = do
-    c_inotify_rm_watch (fromIntegral fd) wd
+    throwErrnoIfMinus1 "inotify_rm_watch" $
+      c_inotify_rm_watch (fromIntegral fd) wd
     return ()
 
 rm_watch :: INotify -> WD -> IO ()
