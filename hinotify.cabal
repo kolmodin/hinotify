@@ -4,7 +4,7 @@ license:        GPL
 author:         Lennart Kolmodin
 homepage:       
 category:       
-build-depends:  base
+build-depends:  base, containers, directory, unix
 synopsis:       Haskell binding to INotify
 hs-Source-dirs: src
 extensions:     ForeignFunctionInterface
