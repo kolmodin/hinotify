@@ -20,9 +20,9 @@
 -----------------------------------------------------------------------------
 
 module System.INotify
-    ( inotify_init
-    , inotify_add_watch
-    , inotify_rm_watch
+    ( init
+    , addWatch
+    , removeWatch
     , INotify
     , WatchDescriptor
     , Event(..)
@@ -32,6 +32,7 @@ module System.INotify
 
 #include "inotify.h"
 
+import Prelude hiding (init)
 import Control.Monad
 import Control.Concurrent
 import Control.Concurrent.MVar
@@ -135,8 +136,8 @@ instance Show WatchDescriptor where
 instance Show Cookie where
     show (Cookie c) = showString "<cookie " . shows c $ ">"
 
-inotify_init :: IO INotify
-inotify_init = do
+init :: IO INotify
+init = do
     fd <- throwErrnoIfMinus1 "inotify_init" c_inotify_init
     em <- newMVar Map.empty
     let desc = showString "<inotify handle, fd=" . shows fd $ ">"
@@ -144,8 +145,8 @@ inotify_init = do
     inotify_start_thread h em
     return (INotify h fd em)
 
-inotify_add_watch :: INotify -> [EventVariety] -> FilePath -> (Event -> IO ()) -> IO WatchDescriptor
-inotify_add_watch inotify@(INotify h fd em) masks fp cb = do
+addWatch :: INotify -> [EventVariety] -> FilePath -> (Event -> IO ()) -> IO WatchDescriptor
+addWatch inotify@(INotify h fd em) masks fp cb = do
     is_dir <- doesDirectoryExist fp
     when (not is_dir) $ do
         file_exist <- doesFileExist fp
@@ -195,8 +196,8 @@ inotify_add_watch inotify@(INotify h fd em) masks fp cb = do
             OneShot -> inOneshot
             AllEvents -> inAllEvents
 
-inotify_rm_watch :: INotify -> WatchDescriptor -> IO ()
-inotify_rm_watch (INotify _ fd _) (WatchDescriptor _ wd) = do
+removeWatch :: INotify -> WatchDescriptor -> IO ()
+removeWatch (INotify _ fd _) (WatchDescriptor _ wd) = do
     throwErrnoIfMinus1 "inotify_rm_watch" $
       c_inotify_rm_watch (fromIntegral fd) wd
     return ()
