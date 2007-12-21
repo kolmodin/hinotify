@@ -161,7 +161,7 @@ addWatch inotify@(INotify h fd em) masks fp cb = do
     let mask = joinMasks (map eventVarietyToMask masks)
     em' <- takeMVar em
     wd <- withCString fp $ \fp_c ->
-	    throwErrnoIfMinus1 "inotify_add_watch" $
+	    throwErrnoIfMinus1 "addWatch" $
               c_inotify_add_watch (fromIntegral fd) fp_c mask
     let event = \e -> do
             when (OneShot `elem` masks) $
