@@ -47,7 +47,7 @@ import Foreign.Storable
 import System.Directory
 import System.IO
 import System.IO.Error
--- import System.Posix
+import System.Posix.Internals
 
 import System.INotify.Masks
 
@@ -140,9 +140,13 @@ init :: IO INotify
 init = do
     fd <- throwErrnoIfMinus1 "inotify_init" c_inotify_init
     em <- newMVar Map.empty
-    -- let desc = showString "<inotify handle, fd=" . shows fd $ ">"
-    -- h <- openFd (fromIntegral fd) (Just Stream) False{-is_socket-} desc ReadMode True{-binary-}
-    h <- fdToHandle fd
+    let desc = showString "<inotify handle, fd=" . shows fd $ ">"
+#if __GLASGOW_HASKELL__ < 608
+    h <-  openFd (fromIntegral fd) (Just Stream) False{-is_socket-} desc ReadMode True{-binary-}
+#else
+    h <-  fdToHandle' (fromIntegral fd) (Just Stream) False{-is_socket-} desc ReadMode True{-binary-}
+#endif
+    -- h <- fdToHandle fd
     inotify_start_thread h em
     return (INotify h fd em)
 
