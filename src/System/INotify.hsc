@@ -65,34 +65,59 @@ newtype Cookie = Cookie CUInt deriving (Eq,Ord)
 
 data FDEvent = FDEvent WD Masks CUInt{-Cookie-} (Maybe String) deriving Show
 
-data Event = 
+data Event =
     -- | A file was accessed. @Accessed isDirectory file@
-      Accessed 
-        Bool
-        (Maybe FilePath)
+      Accessed
+        { isDirectory :: Bool
+        , maybeFilePath :: Maybe FilePath
+        }
     -- | A file was modified. @Modified isDiroctory file@
-    | Modified    Bool (Maybe FilePath)
+    | Modified
+        { isDirectory :: Bool
+        , maybeFilePath :: Maybe FilePath
+        }
     -- | A files attributes where changed. @Attributes isDirectory file@
-    | Attributes  Bool (Maybe FilePath)
+    | Attributes
+        { isDirectory :: Bool
+        , maybeFilePath :: Maybe FilePath
+        }
     -- | A file was closed. @Closed isDirectory wasWritable file@
     | Closed
-        Bool
-        Bool
-        (Maybe FilePath)
+        { isDirectory :: Bool
+        , maybeFilePath :: Maybe FilePath
+        , wasWriteable :: Bool
+        }
     -- | A file was opened. @Opened isDirectory maybeFilePath@
     | Opened
-        Bool
-        (Maybe FilePath)
+        { isDirectory :: Bool
+        , maybeFilePath :: Maybe FilePath
+        }
     -- | A file was moved away from the watched dir. @MovedFrom isDirectory from@
-    | MovedOut Bool Cookie FilePath
+    | MovedOut
+        { isDirectory :: Bool
+        , filePath :: FilePath
+        , cookie :: Cookie
+        }
     -- | A file was moved into the watched dir. @MovedTo isDirectory to@
-    | MovedIn  Bool Cookie FilePath
+    | MovedIn
+        { isDirectory :: Bool
+        , filePath :: FilePath
+        , cookie :: Cookie
+        }
     -- | The watched file was moved. @MovedSelf isDirectory@
-    | MovedSelf Bool
+    | MovedSelf
+        { isDirectory :: Bool
+        }
     -- | A file was created. @Created isDirectory file@
-    | Created Bool FilePath
+    | Created
+        { isDirectory :: Bool
+        , filePath :: FilePath
+        }
     -- | A file was deleted. @Deleted isDirectory file@
-    | Deleted Bool FilePath
+    | Deleted
+        { isDirecotry :: Bool
+        , filePath :: FilePath
+        }
     -- | The file watched was deleted.
     | DeletedSelf
     -- | The file watched was unmounted.
@@ -242,10 +267,10 @@ read_events h =
             | isSet inAccess     = Accessed isDir nameM
             | isSet inModify     = Modified isDir nameM
             | isSet inAttrib     = Attributes isDir nameM
-            | isSet inClose      = Closed isDir (isSet inCloseWrite) nameM
+            | isSet inClose      = Closed isDir nameM (isSet inCloseWrite)
             | isSet inOpen       = Opened isDir nameM
-            | isSet inMovedFrom  = MovedOut isDir (Cookie cookie) name
-            | isSet inMovedTo    = MovedIn isDir (Cookie cookie) name
+            | isSet inMovedFrom  = MovedOut isDir name (Cookie cookie)
+            | isSet inMovedTo    = MovedIn isDir name (Cookie cookie)
             | isSet inMoveSelf   = MovedSelf isDir
             | isSet inCreate     = Created isDir name
             | isSet inDelete     = Deleted isDir name
