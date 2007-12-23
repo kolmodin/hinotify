@@ -163,7 +163,7 @@ instance Show Cookie where
 
 init :: IO INotify
 init = do
-    fd <- throwErrnoIfMinus1 "inotify_init" c_inotify_init
+    fd <- throwErrnoIfMinus1 "INotify.init" c_inotify_init
     em <- newMVar Map.empty
     let desc = showString "<inotify handle, fd=" . shows fd $ ">"
 #if __GLASGOW_HASKELL__ < 608
@@ -228,7 +228,7 @@ addWatch inotify@(INotify h fd em) masks fp cb = do
 
 removeWatch :: INotify -> WatchDescriptor -> IO ()
 removeWatch (INotify _ fd _) (WatchDescriptor _ wd) = do
-    throwErrnoIfMinus1 "inotify_rm_watch" $
+    throwErrnoIfMinus1 "removeWatch" $
       c_inotify_rm_watch (fromIntegral fd) wd
     return ()
 
