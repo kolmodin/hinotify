@@ -1,6 +1,7 @@
 name:           inotify
 version:        0.1
-license:        GPL
+license:        BSD3
+license-file:   LICENSE
 author:         Lennart Kolmodin
 homepage:       
 category:       
