@@ -3,7 +3,7 @@ version:        0.1
 license:        BSD3
 license-file:   LICENSE
 author:         Lennart Kolmodin
-homepage:       
+homepage:       http://haskell.org/~kolmodin/code/hinotify/README.html
 category:       
 build-depends:  base, containers, directory, unix
 synopsis:       Haskell binding to INotify
