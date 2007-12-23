@@ -1,0 +1,140 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+><head
+  ><title
+    >hinotify: inotify for Haskell</title
+    ><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"
+     /><meta name="generator" content="pandoc"
+     /><meta name="author" content="Lennart Kolmodin &lt;kolmodin@gentoo.org&gt;"
+     /><meta name="date" content="December 22, 2007"
+     /><link rel="stylesheet" href="hinotify.css" type="text/css" media="all" />
+</head
+  ><body
+  ><h1 class="title"
+    >hinotify: inotify for Haskell</h1
+    ><div id="toc"
+    ><ul
+      ><li
+	><a href="#about" id="TOC-about"
+	  >About</a
+	  ></li
+	><li
+	><a href="#api" id="TOC-api"
+	  >API</a
+	  ></li
+	><li
+	><a href="#download" id="TOC-download"
+	  >Download</a
+	  ></li
+	><li
+	><a href="#author" id="TOC-author"
+	  >Author</a
+	  ></li
+	><li
+	><a href="#legal" id="TOC-legal"
+	  >Legal</a
+	  ></li
+	></ul
+      ></div
+    ><h2 id="about"
+    ><a href="#TOC-about"
+      >About</a
+      ></h2
+    ><p
+    >hinotify, a library to <a href="http://www.kernel.org/pub/linux/kernel/people/rml/inotify/"
+      >inotify</a
+      > which has been part of the Linux kernel since 2.6.13.</p
+    ><p
+    >inotify provides file system event notification, simply add a watcher to a file or directory and get an event when it is accessed or modified.</p
+    ><p
+    >This module is named <code
+      >inotify</code
+      >.</p
+    ><p
+    >See example code in the <code
+      >examples</code
+      > directory, distributed with the source code.</p
+    ><h2 id="api"
+    ><a href="#TOC-api"
+      >API</a
+      ></h2
+    ><p
+    >The API basically consists of:</p
+    ><pre
+    ><code
+      >init :: IO INotify
+addWatch :: INotify
+         -&gt; [EventVariety]   -- different events to listen on
+         -&gt; FilePath         -- file/directory to watch
+         -&gt; (Event -&gt; IO ()) -- event handler
+         -&gt; IO WatchDescriptor
+removeWatch :: INotify -&gt; WatchDescriptor -&gt; IO ()
+</code
+      ></pre
+    ><p
+    >A sample program:</p
+    ><pre
+    ><code
+      >import System.Directory
+import System.IO
+
+import Prelude hiding (init)
+import System.INotify
+
+main :: IO ()
+main = do
+    inotify &lt;- init
+    print inotify
+    home &lt;- getHomeDirectory
+    wd &lt;- addWatch
+            inotify
+            [Open,Close,Access,Modify,Move]
+            home
+            print
+    print wd
+    putStrLn &quot;Listens to your home directory. Hit enter to terminate.&quot;
+    getLine
+    removeWatch inotify wd
+</code
+      ></pre
+    ><h2 id="download"
+    ><a href="#TOC-download"
+      >Download</a
+      ></h2
+    ><p
+    >The code is available via the <a href="http://haskell.org/~kolmodin/code/hinotify/"
+      >homepage</a
+      >, and via darcs:</p
+    ><pre
+    ><code
+      >darcs get --partial http://haskell.org/~kolmodin/code/hinotify/
+</code
+      ></pre
+    ><p
+    >The <a href="http://haskell.org/~kolmodin/code/hinotify/docs/api/"
+      >API</a
+      > is available online.</p
+    ><p
+    >I&rsquo;m most grateful for feedback on the API, and what else you might have to suggest.</p
+    ><h2 id="author"
+    ><a href="#TOC-author"
+      >Author</a
+      ></h2
+    ><p
+    >Lennart Kolmodin</p
+    ><p
+    ><code
+      >kolmodin at gentoo.org</code
+      ></p
+    ><h2 id="legal"
+    ><a href="#TOC-legal"
+      >Legal</a
+      ></h2
+    ><p
+    >This software is released under a BSD-style license. See LICENSE for more details.</p
+    ><p
+    >Copyright © 2007 Lennart Kolmodin</p
+    ></body
+  ></html
+>
+
