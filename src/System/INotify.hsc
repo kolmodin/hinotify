@@ -63,7 +63,7 @@ data WatchDescriptor = WatchDescriptor Handle WD deriving Eq
 
 newtype Cookie = Cookie CUInt deriving (Eq,Ord)
 
-data FDEvent = FDEvent WD Masks CUInt{-Cookie-} (Maybe String) deriving Show
+data FDEvent = FDEvent WD Masks CUInt{-Cookie-} (Maybe String) deriving (Eq, Show)
 
 data Event =
     -- | A file was accessed. @Accessed isDirectory file@
@@ -126,7 +126,7 @@ data Event =
     | QOverflow
     | Ignored
     | Unknown FDEvent
-    deriving Show
+    deriving (Eq, Show)
 
 data EventVariety
     = Access
