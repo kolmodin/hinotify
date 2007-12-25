@@ -45,9 +45,9 @@ asMany xs ys = take (length xs) ys
 
 explainFailure expected reality = do
     putStrLn "Expected:"
-    mapM_ print expected
+    mapM_ (\x -> putStr "> " >> print x) expected
     putStrLn "But got:"
-    mapM_ print (asMany expected reality)
+    mapM_ (\x -> putStr "< " >> print x) (asMany expected reality)
     testFailure
 
 testFailure = exitFailure 
