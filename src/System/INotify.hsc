@@ -81,7 +81,7 @@ data Event =
         { isDirectory :: Bool
         , maybeFilePath :: Maybe FilePath
         }
-    -- | A file was closed. @Closed isDirectory wasWritable file@
+    -- | A file was closed. @Closed isDirectory file wasWriteable@
     | Closed
         { isDirectory :: Bool
         , maybeFilePath :: Maybe FilePath
@@ -92,13 +92,13 @@ data Event =
         { isDirectory :: Bool
         , maybeFilePath :: Maybe FilePath
         }
-    -- | A file was moved away from the watched dir. @MovedFrom isDirectory from@
+    -- | A file was moved away from the watched dir. @MovedFrom isDirectory from cookie@
     | MovedOut
         { isDirectory :: Bool
         , filePath :: FilePath
         , cookie :: Cookie
         }
-    -- | A file was moved into the watched dir. @MovedTo isDirectory to@
+    -- | A file was moved into the watched dir. @MovedTo isDirectory to cookie@
     | MovedIn
         { isDirectory :: Bool
         , filePath :: FilePath
