@@ -10,7 +10,6 @@ import Data.IORef
 import Control.Monad (liftM)
 import Ix (inRange)
 
-import qualified System.INotify as INotify
 import System.INotify
 
 import Graphics.UI.Gtk hiding (TreeModelFlags(TreeModelListOnly), cellText)
@@ -59,8 +58,8 @@ dirModelNew path = do
       customTreeModelUnrefNode     = \_ -> return ()
     }
 
-  notify <- INotify.init
-  watch <- INotify.addWatch notify [Move, Create, Delete] path $ \event -> 
+  notify <- initINotify
+  watch <- addWatch notify [Move, Create, Delete] path $ \event -> 
     let add file = do 
           index <- atomicModifyIORef rows (\map ->
                      let map' = Map.insert file () map
@@ -73,10 +72,10 @@ dirModelNew path = do
           treeModelRowDeleted model [index]
 
      in case event of
-          MovedIn  _ _ file -> add file
-          MovedOut _ _ file -> remove file
-          Created    _ file -> add file
-          Deleted    _ file -> remove file
+          MovedIn  _ file _ -> add file
+          MovedOut _ file _ -> remove file
+          Created  _ file   -> add file
+          Deleted  _ file   -> remove file
           _ -> putStrLn $ "other event: " ++ show event
 
   -- TODO: on destroy model (INotify.removeWatch watch)
