@@ -1,0 +1,22 @@
+#!/bin/bash
+
+TESTS=( `ls test*.hs | cut -d. -f1` )
+
+for t in ${TESTS[@]}; do
+    rm -rf $t{,.o,.hi}
+    rm -rf $t-playground
+    ghc -v0 --make $t.hs -o $t
+    echo -n Testing $t ...
+    if [[ -x $t ]]; then
+        ./$t
+        exitCode=$?
+        if [[ $exitCode == 0 ]]; then
+            echo Success
+            rm -rf $t{,.o,.hi}
+        else
+            echo Failure with exit code $exitCode
+        fi
+    else
+        echo Compilation failed
+    fi
+done
