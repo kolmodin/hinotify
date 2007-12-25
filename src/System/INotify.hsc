@@ -20,7 +20,7 @@
 -----------------------------------------------------------------------------
 
 module System.INotify
-    ( init
+    ( initINotify
     , addWatch
     , removeWatch
     , INotify
@@ -161,9 +161,9 @@ instance Show WatchDescriptor where
 instance Show Cookie where
     show (Cookie c) = showString "<cookie " . shows c $ ">"
 
-init :: IO INotify
-init = do
-    fd <- throwErrnoIfMinus1 "INotify.init" c_inotify_init
+initINotify :: IO INotify
+initINotify = do
+    fd <- throwErrnoIfMinus1 "initINotify" c_inotify_init
     em <- newMVar Map.empty
     let desc = showString "<inotify handle, fd=" . shows fd $ ">"
 #if __GLASGOW_HASKELL__ < 608
