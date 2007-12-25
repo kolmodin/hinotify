@@ -7,7 +7,7 @@ import System.Directory
 import System.Environment
 import System.Exit
 
-import System.INotify as INotify
+import System.INotify
 
 testName = do
     n <- getProgName
@@ -28,7 +28,7 @@ withWatch inot events path action f =
 
 inTestEnviron events action f = do
     withTempDir $ \testPath -> do
-        inot <- INotify.init
+        inot <- initINotify
         chan <- newChan
         withWatch inot events testPath (writeChan chan) $ do
             action testPath

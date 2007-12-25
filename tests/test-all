@@ -2,6 +2,8 @@
 
 TESTS=( `ls test*.hs | cut -d. -f1` )
 
+rm -rf *.o *.hi
+
 for t in ${TESTS[@]}; do
     rm -rf $t{,.o,.hi}
     rm -rf $t-playground
