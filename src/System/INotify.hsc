@@ -11,11 +11,11 @@
 -- See <http://www.kernel.org/pub/linux/kernel/people/rml/inotify/> and @man
 -- inotify@.
 --
--- Use 'inotify_init' to get a 'INotify', then use 'inotify_add_watch' to
+-- Use 'initINotify' to get a 'INotify', then use 'addWatch' to
 -- add a watch on a file or directory. Select which events you're interested
 -- in with 'EventVariety', which corresponds to the 'Event' events.
 -- 
--- Use 'inotify_rm_watch' once you don't want to watch a file any more.
+-- Use 'removeWatch' once you don't want to watch a file any more.
 --
 -----------------------------------------------------------------------------
 
