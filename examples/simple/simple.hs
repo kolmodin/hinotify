@@ -3,11 +3,11 @@ module Main where
 import System.Directory
 import System.IO
 
-import System.INotify as INotify
+import System.INotify
 
 main :: IO ()
 main = do
-    inotify <- INotify.init
+    inotify <- initINotify
     print inotify
     home <- getHomeDirectory
     wd <- addWatch inotify [Open,Close,Access,Modify,Move] home print
