@@ -1,4 +1,4 @@
-name:               inotify
+name:               hinotify
 version:            0.2
 synopsis:           Haskell binding to INotify
 description:
