@@ -62,7 +62,7 @@
     >The API basically consists of:</p
     ><pre
     ><code
-      >init :: IO INotify
+      >initINotify :: IO INotify
 addWatch :: INotify
          -&gt; [EventVariety]   -- different events to listen on
          -&gt; FilePath         -- file/directory to watch
@@ -78,12 +78,11 @@ removeWatch :: INotify -&gt; WatchDescriptor -&gt; IO ()
       >import System.Directory
 import System.IO
 
-import Prelude hiding (init)
 import System.INotify
 
 main :: IO ()
 main = do
-    inotify &lt;- init
+    inotify &lt;- initINotify
     print inotify
     home &lt;- getHomeDirectory
     wd &lt;- addWatch

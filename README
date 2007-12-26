@@ -23,7 +23,7 @@ API
 
 The API basically consists of:
 
-    init :: IO INotify
+    initINotify :: IO INotify
     addWatch :: INotify
              -> [EventVariety]   -- different events to listen on
              -> FilePath         -- file/directory to watch
@@ -36,12 +36,11 @@ A sample program:
     import System.Directory
     import System.IO
 
-    import Prelude hiding (init)
     import System.INotify
 
     main :: IO ()
     main = do
-        inotify <- init
+        inotify <- initINotify
         print inotify
         home <- getHomeDirectory
         wd <- addWatch
