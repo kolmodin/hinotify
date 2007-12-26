@@ -20,10 +20,11 @@ flag split-base
     description: Choose the new smaller, split-up base package.
 
 library
+    build-depends:  unix
     if flag(split-base)
-        build-depends:  base >= 3, containers, directory, unix
+        build-depends:  base >= 3, containers, directory
     else
-        build-depends:  base < 3, unix
+        build-depends:  base < 3
     extensions:     ForeignFunctionInterface
 
     exposed-modules:
