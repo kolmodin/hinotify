@@ -96,13 +96,13 @@ data Event =
     | MovedOut
         { isDirectory :: Bool
         , filePath :: FilePath
-        , cookie :: Cookie
+        , moveCookie :: Cookie
         }
     -- | A file was moved into the watched dir. @MovedTo isDirectory to cookie@
     | MovedIn
         { isDirectory :: Bool
         , filePath :: FilePath
-        , cookie :: Cookie
+        , moveCookie :: Cookie
         }
     -- | The watched file was moved. @MovedSelf isDirectory@
     | MovedSelf
