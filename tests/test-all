@@ -1,5 +1,12 @@
 #!/bin/bash
 
+GHC=ghc
+
+if [[ -n $1 ]]; then
+    GHC="$1"
+    echo Using GHC: $GHC
+fi
+
 TESTS=( `ls test*.hs | cut -d. -f1` )
 
 rm -rf *.o *.hi
@@ -7,7 +14,7 @@ rm -rf *.o *.hi
 for t in ${TESTS[@]}; do
     rm -rf $t{,.o,.hi}
     rm -rf $t-playground
-    ghc -v0 --make $t.hs -o $t
+    $GHC -v0 --make $t.hs -o $t
     echo -n Testing $t ...
     if [[ -x $t ]]; then
         ./$t
