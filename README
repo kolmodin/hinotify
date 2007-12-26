@@ -1,6 +1,6 @@
 % hinotify: inotify for Haskell
 % Lennart Kolmodin <kolmodin@gentoo.org>
-% December 22, 2007
+% December 26, 2007
 
 About
 -----
@@ -17,6 +17,20 @@ See example code in the `examples` directory, distributed with the source
 code.
 
 [inotify]: http://www.kernel.org/pub/linux/kernel/people/rml/inotify/
+
+News
+----
+
+**hinotify 0.2**
+:   * Updates to the API
+        - Function names is now in semiCamelCase
+        - Restructure event parameters to make it more consistent
+    * Small test suit in `tests/`
+    * Compiles with GHC 6.8.2 and GHC 6.6.1
+    * Requires Cabal 1.2
+
+**hinotify 0.1**
+:   Initial release
 
 API
 ---
