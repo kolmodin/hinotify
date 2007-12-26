@@ -1,5 +1,6 @@
 module Main where
 
+import Control.Exception
 import Control.Monad
 
 import System.Directory
@@ -15,8 +16,10 @@ write path = do
     writeFile (path ++ '/':file) ""
 
 modify path = do
-    withFile (path ++ '/':file) AppendMode $ \ h -> do
-        hPutStr h "yarr!"
+    bracket
+        (openFile (path ++ '/':file) AppendMode)
+        (hClose)
+        (\h -> hPutStr h "yarr!")
 
 remove path = do
     removeFile (path ++ '/':file)
