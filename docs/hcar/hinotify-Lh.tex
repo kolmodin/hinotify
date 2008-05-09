@@ -1,0 +1,36 @@
+\begin{hcarentry}{hinotify}
+\report{Lennart Kolmodin}
+\status{alive}
+\makeheader
+
+``hinotify'' is a simple Haskell wrapper for the Linux kernel's inotify
+mechanism. inotify allows applications to watch file changes since
+Linux kernel 2.6.13.  You can for example use it to do a proper
+locking procedure on a set of files, or keep your application up do
+date on a directory of files in a fast and clean way.
+
+As file and directory notification is available for many operating systems
+upcoming work will include to try to find a common API that could be shared
+for all platforms. Last work has been to see what's possible to do under
+Microsoft Windows, and finding a suiting API for both platforms. This has
+been a joint work with Niklas Broberg. We're still looking for contributors
+to *BSD and Mac OS X. If you're interested, contact us.
+
+\FurtherReading
+\begin{compactitem}
+\item Development version:
+
+  \texttt{darcs get}
+
+  \url{http://www.haskell.org/~kolmodin/code/hinotify/}
+\item Latest released version:
+
+  \url{http://www.haskell.org/~kolmodin/code/hinotify/download/}
+\item Documentation:
+
+  \url{http://www.haskell.org/~kolmodin/code/hinotify/docs/api}
+\item inotify:
+
+  \url{http://www.kernel.org/pub/linux/kernel/people/rml/inotify/}
+\end{compactitem}
+\end{hcarentry}
