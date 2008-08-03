@@ -21,6 +21,8 @@
 
 module System.INotify
     ( initINotify
+    , killINotify
+    , withINotify
     , addWatch
     , removeWatch
     , INotify
@@ -36,6 +38,7 @@ import Prelude hiding (init)
 import Control.Monad
 import Control.Concurrent
 import Control.Concurrent.MVar
+import Control.Exception (bracket)
 import Data.Maybe
 import Data.Map (Map)
 import qualified Data.Map as Map
@@ -58,7 +61,7 @@ type Masks = CUInt
 type EventMap = Map WD (Event -> IO ())
 type WDEvent = (WD, Event)
 
-data INotify = INotify Handle FD (MVar EventMap)
+data INotify = INotify Handle FD (MVar EventMap) ThreadId ThreadId
 data WatchDescriptor = WatchDescriptor Handle WD deriving Eq
 
 newtype Cookie = Cookie CUInt deriving (Eq,Ord)
@@ -151,7 +154,7 @@ data EventVariety
     deriving Eq
 
 instance Show INotify where
-    show (INotify _ fd _) =
+    show (INotify _ fd _ _ _) =
         showString "<inotify fd=" . 
         shows fd $ ">"
 
@@ -172,11 +175,11 @@ initINotify = do
     h <-  fdToHandle' (fromIntegral fd) (Just Stream) False{-is_socket-} desc ReadMode True{-binary-}
 #endif
     -- h <- fdToHandle fd
-    inotify_start_thread h em
-    return (INotify h fd em)
+    (tid1, tid2) <- inotify_start_thread h em
+    return (INotify h fd em tid1 tid2)
 
 addWatch :: INotify -> [EventVariety] -> FilePath -> (Event -> IO ()) -> IO WatchDescriptor
-addWatch inotify@(INotify h fd em) masks fp cb = do
+addWatch inotify@(INotify h fd em _ _) masks fp cb = do
     is_dir <- doesDirectoryExist fp
     when (not is_dir) $ do
         file_exist <- doesFileExist fp
@@ -227,13 +230,13 @@ addWatch inotify@(INotify h fd em) masks fp cb = do
             AllEvents -> inAllEvents
 
 removeWatch :: INotify -> WatchDescriptor -> IO ()
-removeWatch (INotify _ fd _) (WatchDescriptor _ wd) = do
+removeWatch (INotify _ fd _ _ _) (WatchDescriptor _ wd) = do
     throwErrnoIfMinus1 "removeWatch" $
       c_inotify_rm_watch (fromIntegral fd) wd
     return ()
 
 rm_watch :: INotify -> WD -> IO ()
-rm_watch (INotify _ _ em) wd =
+rm_watch (INotify _ _ em _ _) wd =
     modifyMVar_ em (return . Map.delete wd)
 
 read_events :: Handle -> IO [WDEvent]
@@ -283,12 +286,12 @@ read_events h =
         isSet bits = maskIsSet bits mask
         name = fromJust nameM
        
-inotify_start_thread :: Handle -> MVar EventMap -> IO ()
+inotify_start_thread :: Handle -> MVar EventMap -> IO (ThreadId, ThreadId)
 inotify_start_thread h em = do
     chan_events <- newChan
-    forkIO (dispatcher chan_events)
-    forkIO (start_thread chan_events)
-    return ()
+    tid1 <- forkIO (dispatcher chan_events)
+    tid2 <- forkIO (start_thread chan_events)
+    return (tid1,tid2)
     where
     start_thread :: Chan [WDEvent] -> IO ()
     start_thread chan_events = do
@@ -311,6 +314,15 @@ inotify_start_thread h em = do
         case handlerM of
           Nothing -> putStrLn "runHandler: couldn't find handler" -- impossible?
           Just handler -> catch (handler event) (\_ -> return ())
+
+killINotify :: INotify -> IO ()
+killINotify (INotify h _ _ tid1 tid2) =
+    do killThread tid1
+       killThread tid2
+       hClose h
+
+withINotify :: (INotify -> IO a) -> IO a
+withINotify = bracket initINotify killINotify
         
 foreign import ccall unsafe "inotify-syscalls.h inotify_init" c_inotify_init :: IO CInt
 foreign import ccall unsafe "inotify-syscalls.h inotify_add_watch" c_inotify_add_watch :: CInt -> CString -> CUInt -> IO CInt
