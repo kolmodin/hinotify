@@ -2,7 +2,7 @@
 -- |
 -- Module      :  System.INotify
 -- Copyright   :  (c) Lennart Kolmodin 2006
--- License     :  GPL
+-- License     :  BSD3
 -- Maintainer  :  kolmodin@dtek.chalmers.se
 -- Stability   :  experimental
 -- Portability :  hc portable, linux only
