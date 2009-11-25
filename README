@@ -1,6 +1,6 @@
 % hinotify: inotify for Haskell
 % Lennart Kolmodin <kolmodin@gentoo.org>
-% December 26, 2007
+% December 26, 2007-2009
 
 About
 -----
@@ -20,6 +20,9 @@ code.
 
 News
 ----
+
+**hinotify 0.3**
+:   * Compiles with GHC 6.12, GHC 6.10.4, GHC 6.8.2 and GHC 6.6.1
 
 **hinotify 0.2**
 :   * Updates to the API
