@@ -42,7 +42,6 @@ import Control.Exception (bracket)
 import Data.Maybe
 import Data.Map (Map)
 import qualified Data.Map as Map
-import GHC.Handle
 import Foreign.C
 import Foreign.Marshal
 import Foreign.Ptr
@@ -50,7 +49,13 @@ import Foreign.Storable
 import System.Directory
 import System.IO
 import System.IO.Error
+#if __GLASGOW_HASKELL__ >= 612
+import GHC.IO.Handle.FD (fdToHandle')
+import GHC.IO.Device (IODeviceType(Stream))
+#else
+import GHC.Handle
 import System.Posix.Internals
+#endif
 
 import System.INotify.Masks
 
@@ -167,14 +172,13 @@ instance Show Cookie where
 initINotify :: IO INotify
 initINotify = do
     fd <- throwErrnoIfMinus1 "initINotify" c_inotify_init
-    em <- newMVar Map.empty
     let desc = showString "<inotify handle, fd=" . shows fd $ ">"
 #if __GLASGOW_HASKELL__ < 608
     h <-  openFd (fromIntegral fd) (Just Stream) False{-is_socket-} desc ReadMode True{-binary-}
 #else
     h <-  fdToHandle' (fromIntegral fd) (Just Stream) False{-is_socket-} desc ReadMode True{-binary-}
 #endif
-    -- h <- fdToHandle fd
+    em <- newMVar Map.empty
     (tid1, tid2) <- inotify_start_thread h em
     return (INotify h fd em tid1 tid2)
 
@@ -231,7 +235,7 @@ addWatch inotify@(INotify h fd em _ _) masks fp cb = do
 
 removeWatch :: INotify -> WatchDescriptor -> IO ()
 removeWatch (INotify _ fd _ _ _) (WatchDescriptor _ wd) = do
-    throwErrnoIfMinus1 "removeWatch" $
+    _ <- throwErrnoIfMinus1 "removeWatch" $
       c_inotify_rm_watch (fromIntegral fd) wd
     return ()
 
@@ -243,7 +247,7 @@ read_events :: Handle -> IO [WDEvent]
 read_events h = 
     let maxRead = 16385 in
     allocaBytes maxRead $ \buffer -> do
-        hWaitForInput h (-1)  -- wait forever
+        _ <- hWaitForInput h (-1)  -- wait forever
         r <- hGetBufNonBlocking h buffer maxRead
         read_events' buffer r
     where
