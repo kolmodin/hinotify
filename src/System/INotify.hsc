@@ -32,7 +32,7 @@ module System.INotify
     , Cookie
     ) where
 
-#include "inotify.h"
+#include "linux/inotify.h"
 
 import Prelude hiding (init)
 import Control.Monad

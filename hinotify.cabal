@@ -35,5 +35,4 @@ library
 
     ghc-options:    -fvia-C -Wall
 
-    include-dirs:   include
     hs-source-dirs: src
