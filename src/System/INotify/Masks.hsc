@@ -31,7 +31,7 @@ import Data.Bits
 import Data.Maybe
 import Foreign.C.Types
 
-#include "linux/inotify.h"
+#include "sys/inotify.h"
 
 data Mask
     = UserSpace CUInt

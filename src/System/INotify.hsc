@@ -32,7 +32,7 @@ module System.INotify
     , Cookie
     ) where
 
-#include "linux/inotify.h"
+#include "sys/inotify.h"
 
 import Prelude hiding (init)
 import Control.Monad
@@ -328,6 +328,6 @@ killINotify (INotify h _ _ tid1 tid2) =
 withINotify :: (INotify -> IO a) -> IO a
 withINotify = bracket initINotify killINotify
         
-foreign import ccall unsafe "inotify-syscalls.h inotify_init" c_inotify_init :: IO CInt
-foreign import ccall unsafe "inotify-syscalls.h inotify_add_watch" c_inotify_add_watch :: CInt -> CString -> CUInt -> IO CInt
-foreign import ccall unsafe "inotify-syscalls.h inotify_rm_watch" c_inotify_rm_watch :: CInt -> CInt -> IO CInt
+foreign import ccall unsafe "sys/inotify.h inotify_init" c_inotify_init :: IO CInt
+foreign import ccall unsafe "sys/inotify.h inotify_add_watch" c_inotify_add_watch :: CInt -> CString -> CUInt -> IO CInt
+foreign import ccall unsafe "sys/inotify.h inotify_rm_watch" c_inotify_rm_watch :: CInt -> CInt -> IO CInt
