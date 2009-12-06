@@ -21,6 +21,10 @@ code.
 News
 ----
 
+**hinotify 0.3.1**
+:   * Use `inotify.h` from `glibc` rather than from the linux headers, as
+      recommended upstream.
+
 **hinotify 0.3**
 :   * Compiles with GHC 6.12, GHC 6.10.4, GHC 6.8.2 and GHC 6.6.1
 
