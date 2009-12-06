@@ -100,4 +100,4 @@ Copyright &copy; 2007 Lennart Kolmodin
 
 [homepage]: http://haskell.org/~kolmodin/code/hinotify/
 
-[API]: http://haskell.org/~kolmodin/code/hinotify/docs/api/
+[API]: http://hackage.haskell.org/packages/archive/hinotify/latest/doc/html/System-INotify.html
