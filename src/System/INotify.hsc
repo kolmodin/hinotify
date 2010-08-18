@@ -67,7 +67,10 @@ type EventMap = Map WD (Event -> IO ())
 type WDEvent = (WD, Event)
 
 data INotify = INotify Handle FD (MVar EventMap) ThreadId ThreadId
-data WatchDescriptor = WatchDescriptor Handle WD deriving Eq
+data WatchDescriptor = WatchDescriptor INotify WD deriving Eq
+
+instance Eq INotify where
+  (INotify _ fd1 _ _ _) == (INotify _ fd2 _ _ _) = fd1 == fd2
 
 newtype Cookie = Cookie CUInt deriving (Eq,Ord)
 
@@ -183,7 +186,7 @@ initINotify = do
     return (INotify h fd em tid1 tid2)
 
 addWatch :: INotify -> [EventVariety] -> FilePath -> (Event -> IO ()) -> IO WatchDescriptor
-addWatch inotify@(INotify h fd em _ _) masks fp cb = do
+addWatch inotify@(INotify _ fd em _ _) masks fp cb = do
     is_dir <- doesDirectoryExist fp
     when (not is_dir) $ do
         file_exist <- doesFileExist fp
@@ -195,9 +198,8 @@ addWatch inotify@(INotify h fd em _ _) masks fp cb = do
                                 Nothing 
                                 (Just fp)
     let mask = joinMasks (map eventVarietyToMask masks)
-    em' <- takeMVar em
     wd <- withCString fp $ \fp_c ->
-	    throwErrnoIfMinus1 "addWatch" $
+            throwErrnoIfMinus1 "addWatch" $
               c_inotify_add_watch (fromIntegral fd) fp_c mask
     let event = \e -> do
             when (OneShot `elem` masks) $
@@ -208,8 +210,8 @@ addWatch inotify@(INotify h fd em _ _) masks fp cb = do
               Ignored -> rm_watch inotify wd
               _       -> return ()
             cb e
-    putMVar em (Map.insert wd event em')
-    return (WatchDescriptor h wd)
+    modifyMVar_ em $ \em' -> return (Map.insert wd event em')
+    return (WatchDescriptor inotify wd)
     where
     eventVarietyToMask ev =
         case ev of
@@ -233,8 +235,8 @@ addWatch inotify@(INotify h fd em _ _) masks fp cb = do
             OneShot -> inOneshot
             AllEvents -> inAllEvents
 
-removeWatch :: INotify -> WatchDescriptor -> IO ()
-removeWatch (INotify _ fd _ _ _) (WatchDescriptor _ wd) = do
+removeWatch :: WatchDescriptor -> IO ()
+removeWatch (WatchDescriptor (INotify _ fd _ _ _) wd) = do
     _ <- throwErrnoIfMinus1 "removeWatch" $
       c_inotify_rm_watch (fromIntegral fd) wd
     return ()
