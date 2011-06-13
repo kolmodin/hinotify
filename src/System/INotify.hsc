@@ -82,7 +82,7 @@ data Event =
         { isDirectory :: Bool
         , maybeFilePath :: Maybe FilePath
         }
-    -- | A file was modified. @Modified isDiroctory file@
+    -- | A file was modified. @Modified isDirectory file@
     | Modified
         { isDirectory :: Bool
         , maybeFilePath :: Maybe FilePath
@@ -126,7 +126,7 @@ data Event =
         }
     -- | A file was deleted. @Deleted isDirectory file@
     | Deleted
-        { isDirecotry :: Bool
+        { isDirectory :: Bool
         , filePath :: FilePath
         }
     -- | The file watched was deleted.
