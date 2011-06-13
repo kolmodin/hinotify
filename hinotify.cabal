@@ -9,7 +9,7 @@ description:
     accessed or modified.
     .
 category:           System
-homepage:           http://haskell.org/~kolmodin/code/hinotify/README.html
+homepage:           http://code.haskell.org/hinotify/README.html
 license:            BSD3
 license-file:       LICENSE
 author:             Lennart Kolmodin
