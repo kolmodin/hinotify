@@ -95,7 +95,7 @@ Download
 
 The code is available via the [homepage], and via darcs:
 
-    darcs get --partial http://code.haskell.org/hinotify/
+    git clone https://github.com/kolmodin/hinotify.git
 
 The [API] is available online.
 
@@ -117,6 +117,6 @@ more details.
 
 Copyright &copy; 2007-2012 Lennart Kolmodin
 
-[homepage]: http://code.haskell.org/hinotify/
+[homepage]: https://github.com/kolmodin/hinotify.git
 
 [API]: http://hackage.haskell.org/packages/archive/hinotify/latest/doc/html/System-INotify.html

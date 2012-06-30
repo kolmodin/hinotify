@@ -1,7 +1,7 @@
 name:               hinotify
 version:            0.3.2
 build-type:         Simple
-synopsis:           Haskell binding to INotify
+synopsis:           Haskell binding to inotify
 description:
     .
     This library provides a wrapper to the Linux Kernel's inotify feature,
@@ -9,7 +9,7 @@ description:
     accessed or modified.
     .
 category:           System
-homepage:           http://github.com/kolmodin/hinotify/
+homepage:           https://github.com/kolmodin/hinotify.git
 license:            BSD3
 license-file:       LICENSE
 author:             Lennart Kolmodin
