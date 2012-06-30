@@ -23,7 +23,7 @@ withTempDir f = do
 withWatch inot events path action f =
     bracket
         ( addWatch inot events path action )
-        ( removeWatch inot )
+        ( removeWatch )
         ( const f )
 
 inTestEnviron events action f = do
