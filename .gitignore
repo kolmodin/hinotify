@@ -1,0 +1,4 @@
+dist
+_darcs
+tests/*.hi
+tests/*.o
