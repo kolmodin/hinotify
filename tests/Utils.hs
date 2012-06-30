@@ -20,6 +20,12 @@ withTempDir f = do
         ( removeDirectoryRecursive )
         ( f )
 
+withEventWatch inot events path f =
+    bracket
+        ( watch inot events path action )
+        removeWatch
+        ( f )
+
 withWatch inot events path action f =
     bracket
         ( addWatch inot events path action )
@@ -34,6 +40,16 @@ inTestEnviron events action f = do
             action testPath
             events <- getChanContents chan
             f events
+
+inTestEnvironEvent events action f = do
+    withTempDir $ \testPath -> do
+        inot <- initINotify
+        chan <- newChan
+        withEventWatch inot events testPath $ \(wd,chan) -> do
+            action testPath
+            events <- getChanContents chan
+            f events
+
 
 (~=) :: Eq a => [a] -> [a] -> Bool
 [] ~= _ = True
