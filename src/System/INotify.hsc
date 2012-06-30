@@ -1,3 +1,4 @@
+{-# Language ScopedTypeVariables #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  System.INotify
@@ -24,6 +25,7 @@ module System.INotify
     , killINotify
     , withINotify
     , addWatch
+    , watch
     , removeWatch
     , INotify
     , WatchDescriptor
@@ -34,11 +36,11 @@ module System.INotify
 
 #include "sys/inotify.h"
 
-import Prelude hiding (init)
+import Prelude hiding (init, catch)
 import Control.Monad
 import Control.Concurrent
-import Control.Concurrent.MVar
-import Control.Exception (bracket)
+import Control.Concurrent.MVar ()
+import Control.Exception (bracket, catch, SomeException)
 import Data.Maybe
 import Data.Map (Map)
 import qualified Data.Map as Map
@@ -48,7 +50,7 @@ import Foreign.Ptr
 import Foreign.Storable
 import System.Directory
 import System.IO
-import System.IO.Error
+import System.IO.Error hiding (catch)
 #if __GLASGOW_HASKELL__ >= 612
 import GHC.IO.Handle.FD (fdToHandle')
 import GHC.IO.Device (IODeviceType(Stream))
@@ -63,14 +65,25 @@ type FD = CInt
 type WD = CInt
 type Masks = CUInt
 
-type EventMap = Map WD (Event -> IO ())
+type WatchMap = Map WD WatchDescriptor
 type WDEvent = (WD, Event)
 
-data INotify = INotify Handle FD (MVar EventMap) ThreadId ThreadId
-data WatchDescriptor = WatchDescriptor INotify WD deriving Eq
+data INotify = INotify {
+     inHandle   :: Handle
+   , inFD       :: FD
+   , inWatchMap :: (MVar WatchMap)
+   , inTid      :: ThreadId
+ }
+
+data WatchDescriptor = WatchDescriptor {
+    wdInotify :: INotify
+  , wdCInt    :: WD
+  , wdChan    :: (Chan Event)
+  , wdMasks   :: [EventVariety]
+  } deriving Eq
 
 instance Eq INotify where
-  (INotify _ fd1 _ _ _) == (INotify _ fd2 _ _ _) = fd1 == fd2
+  in1 == in2 = inFD in1 == inFD in2
 
 newtype Cookie = Cookie CUInt deriving (Eq,Ord)
 
@@ -162,12 +175,12 @@ data EventVariety
     deriving Eq
 
 instance Show INotify where
-    show (INotify _ fd _ _ _) =
+    show inotify =
         showString "<inotify fd=" . 
-        shows fd $ ">"
+        shows (inFD inotify) $ ">"
 
 instance Show WatchDescriptor where
-    show (WatchDescriptor _ wd) = showString "<wd=" . shows wd $ ">"
+    show wd = showString "<wd=" . shows (wdCInt wd) $ ">"
 
 instance Show Cookie where
     show (Cookie c) = showString "<cookie " . shows c $ ">"
@@ -181,12 +194,21 @@ initINotify = do
 #else
     h <-  fdToHandle' (fromIntegral fd) (Just Stream) False{-is_socket-} desc ReadMode True{-binary-}
 #endif
-    em <- newMVar Map.empty
-    (tid1, tid2) <- inotify_start_thread h em
-    return (INotify h fd em tid1 tid2)
+    wm <- newMVar Map.empty
+    tid1 <- inotify_start_thread h wm
+    return (INotify h fd wm tid1)
 
 addWatch :: INotify -> [EventVariety] -> FilePath -> (Event -> IO ()) -> IO WatchDescriptor
-addWatch inotify@(INotify _ fd em _ _) masks fp cb = do
+addWatch inotify masks fp cb = do
+  (wd,chan) <- watch inotify masks fp
+  _<- forkIO $ do
+        ev <- readChan chan
+        cb ev `catch` \(_::SomeException) -> return ()
+  return wd
+
+watch :: INotify -> [EventVariety] -> FilePath -> IO (WatchDescriptor, Chan Event)
+watch inotify masks fp = do
+    chan <- newChan
     is_dir <- doesDirectoryExist fp
     when (not is_dir) $ do
         file_exist <- doesFileExist fp
@@ -198,20 +220,12 @@ addWatch inotify@(INotify _ fd em _ _) masks fp cb = do
                                 Nothing 
                                 (Just fp)
     let mask = joinMasks (map eventVarietyToMask masks)
-    wd <- withCString fp $ \fp_c ->
-            throwErrnoIfMinus1 "addWatch" $
-              c_inotify_add_watch (fromIntegral fd) fp_c mask
-    let event = \e -> do
-            when (OneShot `elem` masks) $
-              rm_watch inotify wd
-            case e of
-              -- if the event is Ignored then we know for sure that
-              -- this is the last event on that WatchDescriptor
-              Ignored -> rm_watch inotify wd
-              _       -> return ()
-            cb e
-    modifyMVar_ em $ \em' -> return (Map.insert wd event em')
-    return (WatchDescriptor inotify wd)
+    wdInt <- withCString fp $ \fp_c ->
+              throwErrnoIfMinus1 "addWatch" $
+                c_inotify_add_watch (fromIntegral $ inFD inotify) fp_c mask
+    let wd = (WatchDescriptor inotify wdInt chan masks)
+    modifyMVar_ (inWatchMap inotify) $ \wm -> return (Map.insert wdInt wd wm)
+    return (wd, chan)
     where
     eventVarietyToMask ev =
         case ev of
@@ -236,14 +250,14 @@ addWatch inotify@(INotify _ fd em _ _) masks fp cb = do
             AllEvents -> inAllEvents
 
 removeWatch :: WatchDescriptor -> IO ()
-removeWatch (WatchDescriptor (INotify _ fd _ _ _) wd) = do
+removeWatch wd = do
     _ <- throwErrnoIfMinus1 "removeWatch" $
-      c_inotify_rm_watch (fromIntegral fd) wd
+      c_inotify_rm_watch (fromIntegral $ inFD $ wdInotify wd) (wdCInt wd)
     return ()
 
-rm_watch :: INotify -> WD -> IO ()
-rm_watch (INotify _ _ em _ _) wd =
-    modifyMVar_ em (return . Map.delete wd)
+rm_watch :: WatchDescriptor -> IO ()
+rm_watch wd =
+    modifyMVar_ (inWatchMap $ wdInotify wd) (return . Map.delete (wdCInt wd))
 
 read_events :: Handle -> IO [WDEvent]
 read_events h = 
@@ -292,40 +306,34 @@ read_events h =
         isSet bits = maskIsSet bits mask
         name = fromJust nameM
        
-inotify_start_thread :: Handle -> MVar EventMap -> IO (ThreadId, ThreadId)
-inotify_start_thread h em = do
-    chan_events <- newChan
-    tid1 <- forkIO (dispatcher chan_events)
-    tid2 <- forkIO (start_thread chan_events)
-    return (tid1,tid2)
-    where
-    start_thread :: Chan [WDEvent] -> IO ()
-    start_thread chan_events = do
-        events <- read_events h
-        writeChan chan_events events
-        start_thread chan_events
-    dispatcher :: Chan [WDEvent] -> IO ()
-    dispatcher chan_events = do
-        events <- readChan chan_events
-        mapM_ runHandler events
-        dispatcher chan_events
-    runHandler :: WDEvent -> IO ()
-    runHandler (_,  e@QOverflow) = do -- send overflows to all handlers
-        handlers <- readMVar em
-        flip mapM_ (Map.elems handlers) $ \handler ->
-            catch (handler e) (\_ -> return ()) -- supress errors
-    runHandler (wd, event) = do 
-        handlers <- readMVar em
-        let handlerM = Map.lookup wd handlers
-        case handlerM of
-          Nothing -> putStrLn "runHandler: couldn't find handler" -- impossible?
-          Just handler -> catch (handler event) (\_ -> return ())
+inotify_start_thread :: Handle -> MVar WatchMap -> IO ThreadId
+inotify_start_thread h watchMap = forkIO $
+    read_events h >>= mapM_ chanDispatch
+  where
+    writeEvent wd = writeChan (wdChan wd)
+
+    chanDispatch :: WDEvent -> IO ()
+    chanDispatch (_,  e@QOverflow) = do -- send overflows to all handlers
+        wMap <- readMVar watchMap
+        flip mapM_ (Map.elems wMap) $ \wd -> writeEvent wd e
+    chanDispatch (wdInt, event) = do 
+        wMap <- readMVar watchMap
+        case Map.lookup wdInt wMap of
+          Nothing -> putStrLn "chanDispatch: couldn't find watcher" -- impossible?
+          Just wd -> handle wd event
+      where
+        handle wd e = do
+            when (OneShot `elem` wdMasks wd) $
+              rm_watch wd
+            case e of
+              -- if the event is Ignored then we know for sure that
+              -- this is the last event on that WatchDescriptor
+              Ignored -> rm_watch wd
+              _       -> return ()
+            writeEvent wd e
 
 killINotify :: INotify -> IO ()
-killINotify (INotify h _ _ tid1 tid2) =
-    do killThread tid1
-       killThread tid2
-       hClose h
+killINotify inotify = killThread (inTid inotify) >> hClose (inHandle inotify)
 
 withINotify :: (INotify -> IO a) -> IO a
 withINotify = bracket initINotify killINotify
