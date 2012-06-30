@@ -1,6 +1,5 @@
-% hinotify: inotify for Haskell
-% Lennart Kolmodin <kolmodin@gmail.com>
-% December 26, 2007-2012
+hinotify: inotify for Haskell
+=============================
 
 About
 -----
@@ -59,36 +58,39 @@ API
 
 The API basically consists of:
 
-    initINotify :: IO INotify
-    addWatch :: INotify
-             -> [EventVariety]   -- different events to listen on
-             -> FilePath         -- file/directory to watch
-             -> (Event -> IO ()) -- event handler
-             -> IO WatchDescriptor
-    removeWatch :: WatchDescriptor -> IO ()
+```haskell
+initINotify :: IO INotify
+addWatch :: INotify
+         -> [EventVariety]   -- different events to listen on
+         -> FilePath         -- file/directory to watch
+         -> (Event -> IO ()) -- event handler
+         -> IO WatchDescriptor
+removeWatch :: WatchDescriptor -> IO ()
+```
 
 A sample program:
 
-    import System.Directory
-    import System.IO
+```haskell
+import System.Directory
+import System.IO
 
-    import System.INotify
+import System.INotify
 
-    main :: IO ()
-    main = do
-        inotify <- initINotify
-        print inotify
-        home <- getHomeDirectory
-        wd <- addWatch
-                inotify
-                [Open,Close,Access,Modify,Move]
-                home
-                print
-        print wd
-        putStrLn "Listens to your home directory. Hit enter to terminate."
-        getLine
-        removeWatch wd
-
+main :: IO ()
+main = do
+  inotify <- initINotify
+  print inotify
+  home <- getHomeDirectory
+  wd <- addWatch
+          inotify
+          [Open,Close,Access,Modify,Move]
+          home
+          print
+  print wd
+  putStrLn "Listens to your home directory. Hit enter to terminate."
+  getLine
+  removeWatch wd
+```
 
 Download
 --------
