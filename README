@@ -1,6 +1,6 @@
 % hinotify: inotify for Haskell
-% Lennart Kolmodin <kolmodin@gentoo.org>
-% December 26, 2007-2009
+% Lennart Kolmodin <kolmodin@gmail.com>
+% December 26, 2007-2012
 
 About
 -----
@@ -21,20 +21,35 @@ code.
 News
 ----
 
+**hinotify 0.3.2**
+
+* Make each `WatchDescriptor` contain its `INotify`. Changes to the function types:
+
+>      -removeWatch :: INotify -> WatchDescriptor -> IO ()
+>      +removeWatch :: WatchDescriptor -> IO ()
+
+* Fix typo in declaration of `Deleted` in `data Event`;
+
+>      - { isDirecotry :: Bool
+>      + { isDirectory :: Bool
+
 **hinotify 0.3.1**
-:   * Use `inotify.h` from `glibc` rather than from the linux headers, as
+
+* Use `inotify.h` from `glibc` rather than from the linux headers, as
       recommended upstream.
 
 **hinotify 0.3**
-:   * Compiles with GHC 6.12, GHC 6.10.4, GHC 6.8.2 and GHC 6.6.1
+
+* Compiles with GHC 6.12, GHC 6.10.4, GHC 6.8.2 and GHC 6.6.1
 
 **hinotify 0.2**
-:   * Updates to the API
-        - Function names is now in semiCamelCase
-        - Restructure event parameters to make it more consistent
-    * Small test suit in `tests/`
-    * Compiles with GHC 6.8.2 and GHC 6.6.1
-    * Requires Cabal 1.2
+
+* Updates to the API
+    - Function names is now in semiCamelCase
+    - Restructure event parameters to make it more consistent
+* Small test suit in `tests/`
+* Compiles with GHC 6.8.2 and GHC 6.6.1
+* Requires Cabal 1.2
 
 **hinotify 0.1**
 :   Initial release
@@ -50,7 +65,7 @@ The API basically consists of:
              -> FilePath         -- file/directory to watch
              -> (Event -> IO ()) -- event handler
              -> IO WatchDescriptor
-    removeWatch :: INotify -> WatchDescriptor -> IO ()
+    removeWatch :: WatchDescriptor -> IO ()
 
 A sample program:
 
@@ -72,7 +87,7 @@ A sample program:
         print wd
         putStrLn "Listens to your home directory. Hit enter to terminate."
         getLine
-        removeWatch inotify wd
+        removeWatch wd
 
 
 Download
@@ -80,7 +95,7 @@ Download
 
 The code is available via the [homepage], and via darcs:
 
-    darcs get --partial http://haskell.org/~kolmodin/code/hinotify/
+    darcs get --partial http://code.haskell.org/hinotify/
 
 The [API] is available online.
 
@@ -92,7 +107,7 @@ Author
 
 Lennart Kolmodin
 
-`kolmodin at gentoo.org`
+`kolmodin at gmail.com`
 
 Legal
 -----
@@ -100,8 +115,8 @@ Legal
 This software is released under a BSD-style license. See LICENSE for
 more details.
 
-Copyright &copy; 2007 Lennart Kolmodin
+Copyright &copy; 2007-2012 Lennart Kolmodin
 
-[homepage]: http://haskell.org/~kolmodin/code/hinotify/
+[homepage]: http://code.haskell.org/hinotify/
 
 [API]: http://hackage.haskell.org/packages/archive/hinotify/latest/doc/html/System-INotify.html

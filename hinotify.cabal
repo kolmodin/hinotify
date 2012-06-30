@@ -1,5 +1,5 @@
 name:               hinotify
-version:            0.3.1
+version:            0.3.2
 build-type:         Simple
 synopsis:           Haskell binding to INotify
 description:
@@ -9,11 +9,11 @@ description:
     accessed or modified.
     .
 category:           System
-homepage:           http://code.haskell.org/hinotify/README.html
+homepage:           http://github.com/kolmodin/hinotify/
 license:            BSD3
 license-file:       LICENSE
 author:             Lennart Kolmodin
-maintainer:         Lennart Kolmodin <kolmodin@gentoo.org>
+maintainer:         Lennart Kolmodin <kolmodin@gmail.com>
 extra-source-files: README
 cabal-version:      >= 1.2
 
