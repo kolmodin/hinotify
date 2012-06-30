@@ -33,6 +33,6 @@ library
     other-modules:
         System.INotify.Masks
 
-    ghc-options:    -fvia-C -Wall
+    ghc-options: -Wall
 
     hs-source-dirs: src
