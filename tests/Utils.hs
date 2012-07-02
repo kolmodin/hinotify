@@ -17,14 +17,14 @@ withTempDir f = do
     path <- testName
     bracket
         ( createDirectory path >> return path )
-        ( removeDirectoryRecursive )
-        ( f )
+        removeDirectoryRecursive
+        f
 
 withEventWatch inot events path f =
     bracket
-        ( watch inot events path action )
-        removeWatch
-        ( f )
+        ( watch inot events path )
+        (\(wd,e) -> removeWatch wd)
+        f
 
 withWatch inot events path action f =
     bracket
@@ -32,7 +32,7 @@ withWatch inot events path action f =
         removeWatch
         ( const f )
 
-inTestEnviron events action f = do
+inTestEnviron events action f =
     withTempDir $ \testPath -> do
         inot <- initINotify
         chan <- newChan
@@ -41,7 +41,7 @@ inTestEnviron events action f = do
             events <- getChanContents chan
             f events
 
-inTestEnvironEvent events action f = do
+inTestEnvironEvent events action f =
     withTempDir $ \testPath -> do
         inot <- initINotify
         chan <- newChan
@@ -57,7 +57,7 @@ inTestEnvironEvent events action f = do
 _ ~= _ = False
 
 asMany :: [a] -> [a] -> [a]
-asMany xs ys = take (length xs) ys
+asMany = take . length
 
 explainFailure expected reality = do
     putStrLn "Expected:"
@@ -68,4 +68,4 @@ explainFailure expected reality = do
 
 testFailure = exitFailure 
 
-testSuccess = exitWith ExitSuccess
+testSuccess = exitSuccess
