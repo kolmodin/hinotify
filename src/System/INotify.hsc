@@ -43,7 +43,7 @@ import Data.Maybe
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Foreign.C
-import Foreign.Marshal
+import Foreign.Marshal hiding (void)
 import Foreign.Ptr
 import Foreign.Storable
 import System.Directory
@@ -56,6 +56,7 @@ import GHC.IO.Device (IODeviceType(Stream))
 import GHC.Handle
 import System.Posix.Internals
 #endif
+import System.Posix.Files
 
 import System.INotify.Masks
 
@@ -187,16 +188,13 @@ initINotify = do
 
 addWatch :: INotify -> [EventVariety] -> FilePath -> (Event -> IO ()) -> IO WatchDescriptor
 addWatch inotify@(INotify _ fd em _ _) masks fp cb = do
-    is_dir <- doesDirectoryExist fp
-    when (not is_dir) $ do
-        file_exist <- doesFileExist fp
-        when (not file_exist) $ do
-            -- it's not a directory, and not a file...
-            -- it doesn't exist
-            ioError $ mkIOError doesNotExistErrorType
-                                "can't watch what isn't there"
-                                Nothing 
-                                (Just fp)
+    catchIOError (void $
+                  (if (NoSymlink `elem` masks) then getSymbolicLinkStatus else getFileStatus)
+                  fp) $ \_ ->
+        ioError $ mkIOError doesNotExistErrorType
+             "can't watch what isn't there!"
+             Nothing
+             (Just fp)
     let mask = joinMasks (map eventVarietyToMask masks)
     wd <- withCString fp $ \fp_c ->
             throwErrnoIfMinus1 "addWatch" $
