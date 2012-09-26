@@ -1,3 +1,5 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  System.INotify
@@ -37,8 +39,8 @@ module System.INotify
 import Prelude hiding (init)
 import Control.Monad
 import Control.Concurrent
-import Control.Concurrent.MVar
-import Control.Exception (bracket)
+import qualified Control.Exception as E (catch)
+import Control.Exception (bracket, SomeException)
 import Data.Maybe
 import Data.Map (Map)
 import qualified Data.Map as Map
@@ -46,9 +48,8 @@ import Foreign.C
 import Foreign.Marshal hiding (void)
 import Foreign.Ptr
 import Foreign.Storable
-import System.Directory
 import System.IO
-import System.IO.Error
+import System.IO.Error (catchIOError, mkIOError, doesNotExistErrorType)
 #if __GLASGOW_HASKELL__ >= 612
 import GHC.IO.Handle.FD (fdToHandle')
 import GHC.IO.Device (IODeviceType(Stream))
@@ -311,13 +312,15 @@ inotify_start_thread h em = do
     runHandler (_,  e@QOverflow) = do -- send overflows to all handlers
         handlers <- readMVar em
         flip mapM_ (Map.elems handlers) $ \handler ->
-            catch (handler e) (\_ -> return ()) -- supress errors
+            -- supress errors
+            E.catch (handler e) (\(_ :: SomeException) -> return ())
     runHandler (wd, event) = do 
         handlers <- readMVar em
         let handlerM = Map.lookup wd handlers
         case handlerM of
           Nothing -> putStrLn "runHandler: couldn't find handler" -- impossible?
-          Just handler -> catch (handler event) (\_ -> return ())
+          Just handler ->
+            E.catch (handler event) (\(_ :: SomeException) -> return ())
 
 killINotify :: INotify -> IO ()
 killINotify (INotify h _ _ tid1 tid2) =

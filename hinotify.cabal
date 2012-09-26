@@ -26,7 +26,8 @@ library
         build-depends:  base >= 4.5.0.0 && < 5, containers, directory
     else
         build-depends:  base < 3
-    extensions:     ForeignFunctionInterface
+    extensions:     ForeignFunctionInterface,
+                    ScopedTypeVariables
 
     exposed-modules:
         System.INotify
