@@ -44,7 +44,7 @@ data Mask
 maskIsSet :: Mask -> CUInt -> Bool
 maskIsSet mask cuint =
     value mask .&. cuint > 0
-    
+
 value :: Mask -> CUInt
 value (UserSpace i) = i
 value (Extra i) = i

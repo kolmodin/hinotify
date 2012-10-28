@@ -1,9 +1,9 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  System.INotify
--- Copyright   :  (c) Lennart Kolmodin 2006
+-- Copyright   :  (c) Lennart Kolmodin 2006-2012
 -- License     :  BSD3
--- Maintainer  :  kolmodin@dtek.chalmers.se
+-- Maintainer  :  kolmodin@gmail.com
 -- Stability   :  experimental
 -- Portability :  hc portable, linux only
 --
