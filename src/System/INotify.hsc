@@ -37,8 +37,7 @@ module System.INotify
 import Prelude hiding (init)
 import Control.Monad
 import Control.Concurrent
-import Control.Concurrent.MVar
-import Control.Exception (bracket)
+import Control.Exception as E (bracket, catch, SomeException)
 import Data.Maybe
 import Data.Map (Map)
 import qualified Data.Map as Map
@@ -46,7 +45,6 @@ import Foreign.C
 import Foreign.Marshal hiding (void)
 import Foreign.Ptr
 import Foreign.Storable
-import System.Directory
 import System.IO
 import System.IO.Error
 #if __GLASGOW_HASKELL__ >= 612
@@ -188,9 +186,9 @@ initINotify = do
 
 addWatch :: INotify -> [EventVariety] -> FilePath -> (Event -> IO ()) -> IO WatchDescriptor
 addWatch inotify@(INotify _ fd em _ _) masks fp cb = do
-    catchIOError (void $
-                  (if (NoSymlink `elem` masks) then getSymbolicLinkStatus else getFileStatus)
-                  fp) $ \_ ->
+    catch_IO (void $
+              (if (NoSymlink `elem` masks) then getSymbolicLinkStatus else getFileStatus)
+              fp) $ \_ ->
         ioError $ mkIOError doesNotExistErrorType
              "can't watch what isn't there!"
              Nothing
@@ -211,6 +209,9 @@ addWatch inotify@(INotify _ fd em _ _) masks fp cb = do
     modifyMVar_ em $ \em' -> return (Map.insert wd event em')
     return (WatchDescriptor inotify wd)
     where
+    -- catch_IO is same as catchIOError from base >= 4.5.0.0
+    catch_IO :: IO a -> (IOError -> IO a) -> IO a
+    catch_IO = E.catch
     eventVarietyToMask ev =
         case ev of
             Access -> inAccess
@@ -311,13 +312,15 @@ inotify_start_thread h em = do
     runHandler (_,  e@QOverflow) = do -- send overflows to all handlers
         handlers <- readMVar em
         flip mapM_ (Map.elems handlers) $ \handler ->
-            catch (handler e) (\_ -> return ()) -- supress errors
+            E.catch (handler e) ignore_failure -- supress errors
     runHandler (wd, event) = do 
         handlers <- readMVar em
         let handlerM = Map.lookup wd handlers
         case handlerM of
           Nothing -> putStrLn "runHandler: couldn't find handler" -- impossible?
-          Just handler -> catch (handler event) (\_ -> return ())
+          Just handler -> E.catch (handler event) ignore_failure
+    ignore_failure :: SomeException -> IO ()
+    ignore_failure _ = return ()
 
 killINotify :: INotify -> IO ()
 killINotify (INotify h _ _ tid1 tid2) =
