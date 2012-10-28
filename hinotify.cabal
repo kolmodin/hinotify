@@ -17,6 +17,10 @@ maintainer:         Lennart Kolmodin <kolmodin@gmail.com>
 extra-source-files: README
 cabal-version:      >= 1.2
 
+source-repository head
+  type: git
+  location: git://github.com/kolmodin/hinotify.git
+
 flag split-base
     description: Choose the new smaller, split-up base package.
 
