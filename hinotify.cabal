@@ -27,7 +27,7 @@ flag split-base
 library
     build-depends:  unix
     if flag(split-base)
-        build-depends:  base >= 4.5.0.0 && < 5, containers, directory
+        build-depends:  base >= 4.3.0.0 && < 5, containers, directory
     else
         build-depends:  base < 3
     extensions:     ForeignFunctionInterface
