@@ -15,7 +15,7 @@ license-file:       LICENSE
 author:             Lennart Kolmodin
 maintainer:         Lennart Kolmodin <kolmodin@gmail.com>
 extra-source-files: README.md
-cabal-version:      >= 1.2
+cabal-version:      >= 1.6
 
 source-repository head
   type: git
