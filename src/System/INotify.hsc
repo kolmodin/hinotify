@@ -198,8 +198,6 @@ addWatch inotify@(INotify _ fd em _ _) masks fp cb = do
             throwErrnoIfMinus1 "addWatch" $
               c_inotify_add_watch (fromIntegral fd) fp_c mask
     let event = \e -> do
-            when (OneShot `elem` masks) $
-              rm_watch inotify wd
             case e of
               -- if the event is Ignored then we know for sure that
               -- this is the last event on that WatchDescriptor
