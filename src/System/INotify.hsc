@@ -37,7 +37,7 @@ module System.INotify
 import Prelude hiding (init)
 import Control.Monad
 import Control.Concurrent
-import Control.Exception as E (bracket, catch, SomeException)
+import Control.Exception as E (bracket, catch, mask_, SomeException)
 import Data.Maybe
 import Data.Map (Map)
 import qualified Data.Map as Map
@@ -310,15 +310,18 @@ inotify_start_thread h em = do
     runHandler (_,  e@QOverflow) = do -- send overflows to all handlers
         handlers <- readMVar em
         flip mapM_ (Map.elems handlers) $ \handler ->
-            E.catch (handler e) ignore_failure -- supress errors
+            ignore_failure (handler e) -- supress errors
     runHandler (wd, event) = do 
         handlers <- readMVar em
         let handlerM = Map.lookup wd handlers
         case handlerM of
           Nothing -> putStrLn "runHandler: couldn't find handler" -- impossible?
-          Just handler -> E.catch (handler event) ignore_failure
-    ignore_failure :: SomeException -> IO ()
-    ignore_failure _ = return ()
+          Just handler -> ignore_failure (handler event)
+    ignore_failure :: IO () -> IO ()
+    ignore_failure action = mask_ (action `E.catch` ignore)
+      where
+      ignore :: SomeException -> IO ()
+      ignore _ = return ()
 
 killINotify :: INotify -> IO ()
 killINotify (INotify h _ _ tid1 tid2) =
