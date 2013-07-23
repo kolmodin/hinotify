@@ -41,7 +41,7 @@ import Control.Exception as E (bracket, catch, mask_, SomeException)
 import Data.Maybe
 import Data.Map (Map)
 import qualified Data.Map as Map
-import Foreign.C
+import Foreign.C hiding (withCString)
 import Foreign.Marshal hiding (void)
 import Foreign.Ptr
 import Foreign.Storable
@@ -55,6 +55,8 @@ import GHC.Handle
 import System.Posix.Internals
 #endif
 import System.Posix.Files
+import GHC.IO.Encoding (getFileSystemEncoding)
+import GHC.Foreign (withCString)
 
 import System.INotify.Masks
 
@@ -194,7 +196,8 @@ addWatch inotify@(INotify _ fd em _ _) masks fp cb = do
              Nothing
              (Just fp)
     let mask = joinMasks (map eventVarietyToMask masks)
-    wd <- withCString fp $ \fp_c ->
+    enc <- getFileSystemEncoding
+    wd <- withCString enc fp $ \fp_c ->
             throwErrnoIfMinus1 "addWatch" $
               c_inotify_add_watch (fromIntegral fd) fp_c mask
     let event = \e -> do
