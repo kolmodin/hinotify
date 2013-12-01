@@ -207,7 +207,7 @@ addWatch inotify@(INotify _ fd em _ _) masks fp cb = do
               Ignored -> rm_watch inotify wd
               _       -> return ()
             cb e
-    modifyMVar_ em $ \em' -> return (Map.insert wd event em')
+    modifyMVar_ em $ \em' -> return (Map.insertWith (liftM2 (>>)) wd event em')
     return (WatchDescriptor inotify wd)
     where
     -- catch_IO is same as catchIOError from base >= 4.5.0.0
