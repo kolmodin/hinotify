@@ -14,4 +14,4 @@ main = do
     print wd
     putStrLn "Listens to your home directory. Hit enter to terminate."
     getLine
-    removeWatch inotify wd
+    removeWatch wd
