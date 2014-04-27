@@ -20,6 +20,11 @@ code.
 News
 ----
 
+**hinotify 0.3.7**
+
+* Bug fix: When registerering a new watch on a path which is already watched,
+  don't overwrite the event listener from the previous watch.
+
 **hinotify 0.3.2**
 
 * Make each `WatchDescriptor` contain its `INotify`. Changes to the function types:
