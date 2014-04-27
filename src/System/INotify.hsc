@@ -200,14 +200,14 @@ addWatch inotify@(INotify _ fd em _ _) masks fp cb = do
     wd <- withCString enc fp $ \fp_c ->
             throwErrnoIfMinus1 "addWatch" $
               c_inotify_add_watch (fromIntegral fd) fp_c mask
-    let event = \e -> do
+    let event = \e -> ignore_failure $ do
             case e of
               -- if the event is Ignored then we know for sure that
               -- this is the last event on that WatchDescriptor
               Ignored -> rm_watch inotify wd
               _       -> return ()
             cb e
-    modifyMVar_ em $ \em' -> return (Map.insert wd event em')
+    modifyMVar_ em $ \em' -> return (Map.insertWith (liftM2 (>>)) wd event em')
     return (WatchDescriptor inotify wd)
     where
     -- catch_IO is same as catchIOError from base >= 4.5.0.0
@@ -234,6 +234,12 @@ addWatch inotify@(INotify _ fd em _ _) masks fp cb = do
             MaskAdd -> inMaskAdd
             OneShot -> inOneshot
             AllEvents -> inAllEvents
+
+    ignore_failure :: IO () -> IO ()
+    ignore_failure action = mask_ (action `E.catch` ignore)
+      where
+      ignore :: SomeException -> IO ()
+      ignore _ = return ()
 
 removeWatch :: WatchDescriptor -> IO ()
 removeWatch (WatchDescriptor (INotify _ fd _ _ _) wd) = do
@@ -312,19 +318,13 @@ inotify_start_thread h em = do
     runHandler :: WDEvent -> IO ()
     runHandler (_,  e@QOverflow) = do -- send overflows to all handlers
         handlers <- readMVar em
-        flip mapM_ (Map.elems handlers) $ \handler ->
-            ignore_failure (handler e) -- supress errors
+        mapM_ ($ e) (Map.elems handlers)
     runHandler (wd, event) = do 
         handlers <- readMVar em
         let handlerM = Map.lookup wd handlers
         case handlerM of
           Nothing -> putStrLn "runHandler: couldn't find handler" -- impossible?
-          Just handler -> ignore_failure (handler event)
-    ignore_failure :: IO () -> IO ()
-    ignore_failure action = mask_ (action `E.catch` ignore)
-      where
-      ignore :: SomeException -> IO ()
-      ignore _ = return ()
+          Just handler -> handler event
 
 killINotify :: INotify -> IO ()
 killINotify (INotify h _ _ tid1 tid2) =
