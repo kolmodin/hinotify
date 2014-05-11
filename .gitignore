@@ -1,4 +1,5 @@
 dist
 _darcs
-tests/*.hi
-tests/*.o
+*.swp
+.cabal-sandbox
+cabal.sandbox.config
