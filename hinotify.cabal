@@ -15,7 +15,7 @@ license-file:       LICENSE
 author:             Lennart Kolmodin
 maintainer:         Lennart Kolmodin <kolmodin@gmail.com>
 extra-source-files: README.md
-cabal-version:      >= 1.6
+cabal-version:      >= 1.8
 
 source-repository head
   type: git
@@ -40,3 +40,38 @@ library
     ghc-options: -Wall
 
     hs-source-dirs: src
+
+test-suite test001
+    type: exitcode-stdio-1.0
+    build-depends: base, directory, hinotify
+    hs-source-dirs: src tests
+    main-is: test001-list-dir-contents.hs
+    ghc-options: -Wall
+
+test-suite test002
+    type: exitcode-stdio-1.0
+    build-depends: base, directory, hinotify
+    hs-source-dirs: src tests
+    main-is: test002-writefile.hs
+    ghc-options: -Wall
+
+test-suite test003
+    type: exitcode-stdio-1.0
+    build-depends: base, directory, hinotify
+    hs-source-dirs: src tests
+    main-is: test003-removefile.hs
+    ghc-options: -Wall
+
+test-suite test004
+    type: exitcode-stdio-1.0
+    build-depends: base, directory, hinotify
+    hs-source-dirs: src tests
+    main-is: test004-modify-file.hs
+    ghc-options: -Wall
+
+test-suite test005
+    type: exitcode-stdio-1.0
+    build-depends: base, directory, hinotify
+    hs-source-dirs: src tests
+    main-is: test005-move-file.hs
+    ghc-options: -Wall

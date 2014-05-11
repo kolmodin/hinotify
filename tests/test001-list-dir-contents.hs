@@ -8,12 +8,15 @@ import System.INotify as INotify
 
 import Utils
 
+main :: IO ()
 main =
     inTestEnviron [Open, Close] getDirectoryContents $ \ events -> do
         when (expected ~= events)
             testSuccess
-        explainFailure expected events
+        putStrLn $ explainFailure expected events
+        testFailure
 
+expected :: [Event]
 expected =
     [ Opened True Nothing
     , Closed True Nothing False

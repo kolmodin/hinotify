@@ -9,10 +9,12 @@ import System.Exit
 
 import System.INotify
 
+testName :: IO String
 testName = do
     n <- getProgName
     return (n ++ "-playground")
 
+withTempDir :: (String -> IO a) -> IO a
 withTempDir f = do
     path <- testName
     bracket
@@ -20,20 +22,22 @@ withTempDir f = do
         ( removeDirectoryRecursive )
         ( f )
 
+withWatch :: INotify -> [EventVariety] -> FilePath -> (Event -> IO ()) -> IO a -> IO a
 withWatch inot events path action f =
     bracket
         ( addWatch inot events path action )
         removeWatch
         ( const f )
 
+inTestEnviron :: [EventVariety] -> (String -> IO a) -> ([Event] -> IO b) -> IO b
 inTestEnviron events action f = do
     withTempDir $ \testPath -> do
         inot <- initINotify
         chan <- newChan
         withWatch inot events testPath (writeChan chan) $ do
-            action testPath
-            events <- getChanContents chan
-            f events
+            _ <- action testPath
+            events' <- getChanContents chan
+            f events'
 
 (~=) :: Eq a => [a] -> [a] -> Bool
 [] ~= _ = True
@@ -43,13 +47,14 @@ _ ~= _ = False
 asMany :: [a] -> [a] -> [a]
 asMany xs ys = take (length xs) ys
 
-explainFailure expected reality = do
-    putStrLn "Expected:"
-    mapM_ (\x -> putStr "> " >> print x) expected
-    putStrLn "But got:"
-    mapM_ (\x -> putStr "< " >> print x) (asMany expected reality)
-    testFailure
+explainFailure :: Show a => [a] -> [a] -> String
+explainFailure expected reality = unlines $
+    [ "Expected:" ] ++
+    [ "> " ++ show x | x <- expected ] ++
+    [ "But got:" ] ++
+    [ "< " ++ show x | x <- asMany expected reality ]
 
+testFailure, testSuccess :: IO a
 testFailure = exitFailure 
-
 testSuccess = exitWith ExitSuccess
+
