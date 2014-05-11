@@ -1,6 +1,8 @@
 hinotify: inotify for Haskell
 =============================
 
+[![Build Status](https://api.travis-ci.org/kolmodin/hinotify.png?branch=master)](http://travis-ci.org/kolmodin/hinotify)
+
 About
 -----
 
