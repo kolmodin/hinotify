@@ -3,11 +3,9 @@ version:            0.3.7
 build-type:         Simple
 synopsis:           Haskell binding to inotify
 description:
-    .
     This library provides a wrapper to the Linux Kernel's inotify feature,
     allowing applications to subscribe to notifications when a file is
     accessed or modified.
-    .
 category:           System
 homepage:           https://github.com/kolmodin/hinotify.git
 license:            BSD3
