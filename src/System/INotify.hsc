@@ -41,7 +41,7 @@ import Control.Exception as E (bracket, catch, mask_, SomeException)
 import Data.Maybe
 import Data.Map (Map)
 import qualified Data.Map as Map
-import Foreign.C hiding (withCString)
+import Foreign.C hiding (withCString, peekCString)
 import Foreign.Marshal hiding (void)
 import Foreign.Ptr
 import Foreign.Storable
@@ -56,7 +56,7 @@ import System.Posix.Internals
 #endif
 import System.Posix.Files
 import GHC.IO.Encoding (getFileSystemEncoding)
-import GHC.Foreign (withCString)
+import GHC.Foreign (withCString, peekCString)
 
 import System.INotify.Masks
 
@@ -268,7 +268,9 @@ read_events h =
         len    <- (#peek struct inotify_event, len)    ptr :: IO CUInt
         nameM  <- if len == 0
                     then return Nothing
-                    else fmap Just $ peekCString ((#ptr struct inotify_event, name) ptr)
+                    else do
+                        enc <- getFileSystemEncoding
+                        fmap Just $ peekCString enc ((#ptr struct inotify_event, name) ptr)
         let event_size = (#size struct inotify_event) + (fromIntegral len) 
             event = cEvent2Haskell (FDEvent wd mask cookie nameM)
         rest <- read_events' (ptr `plusPtr` event_size) (r - event_size)
