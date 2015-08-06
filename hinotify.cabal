@@ -12,7 +12,7 @@ license:            BSD3
 license-file:       LICENSE
 author:             Lennart Kolmodin
 maintainer:         Lennart Kolmodin <kolmodin@gmail.com>
-extra-source-files: README.md
+extra-source-files: README.md, CHANGELOG.md
 cabal-version:      >= 1.8
 
 source-repository head
