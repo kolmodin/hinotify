@@ -29,7 +29,7 @@ library
         System.INotify.Masks
 
     ghc-options: -Wall
-
+    includes: sys/inotify.h
     hs-source-dirs: src
 
 test-suite test001
