@@ -37,6 +37,7 @@ test-suite test001
     build-depends: base, directory, hinotify
     hs-source-dirs: src tests
     main-is: test001-list-dir-contents.hs
+    other-modules: Utils
     ghc-options: -Wall
 
 test-suite test002
@@ -44,6 +45,7 @@ test-suite test002
     build-depends: base, directory, hinotify
     hs-source-dirs: src tests
     main-is: test002-writefile.hs
+    other-modules: Utils
     ghc-options: -Wall
 
 test-suite test003
@@ -51,6 +53,7 @@ test-suite test003
     build-depends: base, directory, hinotify
     hs-source-dirs: src tests
     main-is: test003-removefile.hs
+    other-modules: Utils
     ghc-options: -Wall
 
 test-suite test004
@@ -58,6 +61,7 @@ test-suite test004
     build-depends: base, directory, hinotify
     hs-source-dirs: src tests
     main-is: test004-modify-file.hs
+    other-modules: Utils
     ghc-options: -Wall
 
 test-suite test005
@@ -65,4 +69,5 @@ test-suite test005
     build-depends: base, directory, hinotify
     hs-source-dirs: src tests
     main-is: test005-move-file.hs
+    other-modules: Utils
     ghc-options: -Wall
