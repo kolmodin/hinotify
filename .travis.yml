@@ -1,31 +1,31 @@
-# NB: don't set `language: haskell` here
 # See https://github.com/hvr/multi-ghc-travis for more information
+
+language: c
 
 sudo: false
 
-addons:
-  apt:
-    sources:
-      - hvr-ghc
-    packages:
-      - cabal-install-1.18
-      - cabal-install-1.22
-      - ghc-7.4.2
-      - ghc-7.6.3
-      - ghc-7.8.4
-      - ghc-7.10.1
+matrix:
+  include:
+    - env: CABALVER=1.18 GHCVER=7.4.2
+      addons: {apt: {packages: [cabal-install-1.18,ghc-7.4.2], sources: [hvr-ghc]}}
+    - env: CABALVER=1.18 GHCVER=7.6.3
+      addons: {apt: {packages: [cabal-install-1.18,ghc-7.6.3], sources: [hvr-ghc]}}
+    - env: CABALVER=1.18 GHCVER=7.8.4
+      addons: {apt: {packages: [cabal-install-1.18,ghc-7.8.4], sources: [hvr-ghc]}}
+    - env: CABALVER=1.22 GHCVER=7.10.2
+      addons: {apt: {packages: [cabal-install-1.22,ghc-7.10.2], sources: [hvr-ghc]}}
+    - env: CABALVER=head GHCVER=head
+      addons: {apt: {packages: [cabal-install-head,ghc-head],  sources: [hvr-ghc]}}
 
-env:
- - CABALVER=1.18 GHCVER=7.4.2
- - CABALVER=1.18 GHCVER=7.6.3
- - CABALVER=1.18 GHCVER=7.8.4
- - CABALVER=1.22 GHCVER=7.10.2
+  allow_failures:
+    - env: CABALVER=head GHCVER=head
 
 before_install:
  - export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:$PATH
 
 install:
- - cabal update
+ - cabal --version
+ - travis_retry cabal update
  - cabal sandbox init
  - cabal install --only-dependencies --enable-tests -j
 
