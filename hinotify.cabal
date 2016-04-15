@@ -20,17 +20,19 @@ source-repository head
   location: git://github.com/kolmodin/hinotify.git
 
 library
-    build-depends:  base >= 4.5.0.0 && < 5, containers, directory, unix
+    build-depends:  base >= 4.5.0.0 && < 5, bytestring, containers, directory, unix
     extensions:     ForeignFunctionInterface
 
     exposed-modules:
         System.INotify
+        System.INotify.ByteString
     other-modules:
         System.INotify.Masks
 
     ghc-options: -Wall
     includes: sys/inotify.h
     hs-source-dirs: src
+
 
 test-suite test001
     type: exitcode-stdio-1.0
@@ -71,3 +73,46 @@ test-suite test005
     main-is: test005-move-file.hs
     other-modules: Utils
     ghc-options: -Wall
+
+
+
+test-suite test001-BS
+    type: exitcode-stdio-1.0
+    build-depends: base, bytestring, directory, hinotify, posix-paths, unix, utf8-string
+    hs-source-dirs: src tests
+    main-is: test001-list-dir-contents-BS.hs
+    other-modules: Utils.ByteString
+    ghc-options: -Wall
+
+test-suite test002-BS
+    type: exitcode-stdio-1.0
+    build-depends: base, bytestring, directory, hinotify, posix-paths, unix, utf8-string
+    hs-source-dirs: src tests
+    main-is: test002-writefile-BS.hs
+    other-modules: Utils.ByteString
+    ghc-options: -Wall
+
+test-suite test003-BS
+    type: exitcode-stdio-1.0
+    build-depends: base, bytestring, directory, hinotify, posix-paths, unix, utf8-string
+    hs-source-dirs: src tests
+    main-is: test003-removefile-BS.hs
+    other-modules: Utils.ByteString
+    ghc-options: -Wall
+
+test-suite test004-BS
+    type: exitcode-stdio-1.0
+    build-depends: base, bytestring, directory, hinotify, posix-paths, unix, utf8-string
+    hs-source-dirs: src tests
+    main-is: test004-modify-file-BS.hs
+    other-modules: Utils.ByteString
+    ghc-options: -Wall
+
+test-suite test005-BS
+    type: exitcode-stdio-1.0
+    build-depends: base, bytestring, directory, hinotify, posix-paths, unix, utf8-string
+    hs-source-dirs: src tests
+    main-is: test005-move-file-BS.hs
+    other-modules: Utils.ByteString
+    ghc-options: -Wall
+
