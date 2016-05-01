@@ -38,7 +38,6 @@ import Prelude hiding (init)
 import Control.Monad
 import Control.Concurrent
 import Control.Exception as E (bracket, catch, mask_, SomeException)
-import qualified Data.ByteString as B
 import Data.Maybe
 import Data.Map (Map)
 import qualified Data.Map as Map
@@ -51,7 +50,8 @@ import System.IO.Error
 import GHC.IO.Handle.FD (fdToHandle')
 import GHC.IO.Device (IODeviceType(Stream))
 
-import System.Posix.Files
+import System.Posix.ByteString.FilePath
+import System.Posix.Files.ByteString
 
 import System.INotify.Masks
 
@@ -70,45 +70,45 @@ instance Eq INotify where
 
 newtype Cookie = Cookie CUInt deriving (Eq,Ord)
 
-data FDEvent = FDEvent WD Masks CUInt{-Cookie-} (Maybe B.ByteString) deriving (Eq, Show)
+data FDEvent = FDEvent WD Masks CUInt{-Cookie-} (Maybe RawFilePath) deriving (Eq, Show)
 
 data Event =
     -- | A file was accessed. @Accessed isDirectory file@
       Accessed
         { isDirectory :: Bool
-        , maybeFilePath :: Maybe B.ByteString
+        , maybeFilePath :: Maybe RawFilePath
         }
     -- | A file was modified. @Modified isDirectory file@
     | Modified
         { isDirectory :: Bool
-        , maybeFilePath :: Maybe B.ByteString
+        , maybeFilePath :: Maybe RawFilePath
         }
     -- | A files attributes where changed. @Attributes isDirectory file@
     | Attributes
         { isDirectory :: Bool
-        , maybeFilePath :: Maybe B.ByteString
+        , maybeFilePath :: Maybe RawFilePath
         }
     -- | A file was closed. @Closed isDirectory file wasWriteable@
     | Closed
         { isDirectory :: Bool
-        , maybeFilePath :: Maybe B.ByteString
+        , maybeFilePath :: Maybe RawFilePath
         , wasWriteable :: Bool
         }
     -- | A file was opened. @Opened isDirectory maybeFilePath@
     | Opened
         { isDirectory :: Bool
-        , maybeFilePath :: Maybe B.ByteString
+        , maybeFilePath :: Maybe RawFilePath
         }
     -- | A file was moved away from the watched dir. @MovedFrom isDirectory from cookie@
     | MovedOut
         { isDirectory :: Bool
-        , filePath :: B.ByteString
+        , filePath :: RawFilePath
         , moveCookie :: Cookie
         }
     -- | A file was moved into the watched dir. @MovedTo isDirectory to cookie@
     | MovedIn
         { isDirectory :: Bool
-        , filePath :: B.ByteString
+        , filePath :: RawFilePath
         , moveCookie :: Cookie
         }
     -- | The watched file was moved. @MovedSelf isDirectory@
@@ -118,12 +118,12 @@ data Event =
     -- | A file was created. @Created isDirectory file@
     | Created
         { isDirectory :: Bool
-        , filePath :: B.ByteString
+        , filePath :: RawFilePath
         }
     -- | A file was deleted. @Deleted isDirectory file@
     | Deleted
         { isDirectory :: Bool
-        , filePath :: B.ByteString
+        , filePath :: RawFilePath
         }
     -- | The file watched was deleted.
     | DeletedSelf
@@ -177,7 +177,7 @@ initINotify = do
     (tid1, tid2) <- inotify_start_thread h em
     return (INotify h fd em tid1 tid2)
 
-addWatch :: INotify -> [EventVariety] -> FilePath -> (Event -> IO ()) -> IO WatchDescriptor
+addWatch :: INotify -> [EventVariety] -> RawFilePath -> (Event -> IO ()) -> IO WatchDescriptor
 addWatch inotify@(INotify _ fd em _ _) masks fp cb = do
     catch_IO (void $
               (if (NoSymlink `elem` masks) then getSymbolicLinkStatus else getFileStatus)
@@ -185,9 +185,9 @@ addWatch inotify@(INotify _ fd em _ _) masks fp cb = do
         ioError $ mkIOError doesNotExistErrorType
              "can't watch what isn't there!"
              Nothing
-             (Just fp)
+             (Just (show fp))
     let mask = joinMasks (map eventVarietyToMask masks)
-    wd <- withCString fp $ \fp_c ->
+    wd <- withFilePath fp $ \fp_c ->
             throwErrnoIfMinus1 "addWatch" $
               c_inotify_add_watch (fromIntegral fd) fp_c mask
     let event = \e -> ignore_failure $ do
@@ -259,7 +259,7 @@ read_events h =
         nameM  <- if len == 0
                     then return Nothing
                     else do
-                        fmap Just $ B.packCString ((#ptr struct inotify_event, name) ptr)
+                        fmap Just $ peekFilePath ((#ptr struct inotify_event, name) ptr)
         let event_size = (#size struct inotify_event) + (fromIntegral len) 
             event = cEvent2Haskell (FDEvent wd mask cookie nameM)
         rest <- read_events' (ptr `plusPtr` event_size) (r - event_size)

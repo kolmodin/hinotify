@@ -20,7 +20,7 @@ source-repository head
   location: git://github.com/kolmodin/hinotify.git
 
 library
-    build-depends:  base >= 4.5.0.0 && < 5, bytestring, containers, directory, unix
+    build-depends:  base >= 4.5.0.0 && < 5, bytestring, containers, unix
     extensions:     ForeignFunctionInterface
 
     exposed-modules:
@@ -34,7 +34,7 @@ library
 
 test-suite test001
     type: exitcode-stdio-1.0
-    build-depends: base, directory, hinotify
+    build-depends: base, bytestring, directory, hinotify, unix
     hs-source-dirs: src tests
     main-is: test001-list-dir-contents.hs
     other-modules: Utils
@@ -42,7 +42,7 @@ test-suite test001
 
 test-suite test002
     type: exitcode-stdio-1.0
-    build-depends: base, directory, hinotify
+    build-depends: base, bytestring, directory, hinotify, unix
     hs-source-dirs: src tests
     main-is: test002-writefile.hs
     other-modules: Utils
@@ -50,7 +50,7 @@ test-suite test002
 
 test-suite test003
     type: exitcode-stdio-1.0
-    build-depends: base, directory, hinotify
+    build-depends: base, bytestring, directory, hinotify, unix
     hs-source-dirs: src tests
     main-is: test003-removefile.hs
     other-modules: Utils
@@ -58,7 +58,7 @@ test-suite test003
 
 test-suite test004
     type: exitcode-stdio-1.0
-    build-depends: base, directory, hinotify
+    build-depends: base, bytestring, directory, hinotify, unix
     hs-source-dirs: src tests
     main-is: test004-modify-file.hs
     other-modules: Utils
@@ -66,7 +66,7 @@ test-suite test004
 
 test-suite test005
     type: exitcode-stdio-1.0
-    build-depends: base, directory, hinotify
+    build-depends: base, bytestring, directory, hinotify, unix
     hs-source-dirs: src tests
     main-is: test005-move-file.hs
     other-modules: Utils

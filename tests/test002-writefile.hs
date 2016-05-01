@@ -3,13 +3,15 @@ module Main where
 
 import Control.Monad
 
+import qualified Data.ByteString as B
+
 import System.INotify as INotify
 
 import Utils
 
-write :: String -> IO ()
-write path = do
-    writeFile (path ++ "/hello") ""
+write :: FilePath -> IO ()
+write path =
+    B.writeFile (path ++ "/hello") ""
     -- actually writing any contents gives me two Modified
     
 main :: IO ()

@@ -14,15 +14,15 @@ file = "hello"
 file2 = "hello2"
 
 write :: String -> IO ()
-write path = do
+write path =
     writeFile (path ++ '/':file) ""
 
 move :: String -> IO ()
-move path = do
+move path =
     renameFile (path ++ '/':file) (path ++ '/':file2)
 
 remove :: String -> IO ()
-remove path = do
+remove path =
     removeFile (path ++ '/':file2)
 
 action :: String -> IO ()

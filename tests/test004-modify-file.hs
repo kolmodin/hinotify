@@ -15,18 +15,18 @@ file :: String
 file = "hello"
 
 write :: String -> IO ()
-write path = do
+write path =
     writeFile (path ++ '/':file) ""
 
 modify :: String -> IO ()
-modify path = do
+modify path =
     bracket
         (openFile (path ++ '/':file) AppendMode)
-        (hClose)
+        hClose
         (\h -> hPutStr h "yarr!")
 
 remove :: String -> IO ()
-remove path = do
+remove path =
     removeFile (path ++ '/':file)
 
 action :: String -> IO ()

@@ -13,11 +13,11 @@ file :: String
 file = "hello"
 
 write :: String -> IO ()
-write path = do
+write path =
     writeFile (path ++ '/':file) ""
 
 remove :: String -> IO ()
-remove path = do
+remove path =
     removeFile (path ++ '/':file)
 
 action :: String -> IO ()
