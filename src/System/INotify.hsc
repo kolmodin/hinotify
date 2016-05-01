@@ -47,13 +47,9 @@ import Foreign.Ptr
 import Foreign.Storable
 import System.IO
 import System.IO.Error
-#if __GLASGOW_HASKELL__ >= 612
 import GHC.IO.Handle.FD (fdToHandle')
 import GHC.IO.Device (IODeviceType(Stream))
-#else
-import GHC.Handle
-import System.Posix.Internals
-#endif
+
 import System.Posix.Files
 import GHC.IO.Encoding (getFileSystemEncoding)
 import GHC.Foreign (withCString, peekCString)
@@ -177,11 +173,7 @@ initINotify :: IO INotify
 initINotify = do
     fd <- throwErrnoIfMinus1 "initINotify" c_inotify_init
     let desc = showString "<inotify handle, fd=" . shows fd $ ">"
-#if __GLASGOW_HASKELL__ < 608
-    h <-  openFd (fromIntegral fd) (Just Stream) False{-is_socket-} desc ReadMode True{-binary-}
-#else
     h <-  fdToHandle' (fromIntegral fd) (Just Stream) False{-is_socket-} desc ReadMode True{-binary-}
-#endif
     em <- newMVar Map.empty
     (tid1, tid2) <- inotify_start_thread h em
     return (INotify h fd em tid1 tid2)
