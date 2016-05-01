@@ -3,15 +3,13 @@ module Main where
 
 import Control.Monad
 
-import Data.String
-
 import System.Directory
 
 import System.INotify as INotify
 
 import Utils
 
-file, file2 :: IsString s => s
+file, file2 :: String
 file = "hello"
 file2 = "hello2"
 
@@ -44,11 +42,11 @@ main =
 
 expected :: Cookie -> [Event]
 expected cookie =
-    [ Created   False file
-    , Opened    False (Just file)
-    , Modified  False (Just file)
-    , Closed    False (Just file) True
-    , MovedOut  False file  cookie
-    , MovedIn   False file2 cookie
-    , Deleted   False file2
+    [ Created   False "hello"
+    , Opened    False (Just "hello")
+    , Modified  False (Just "hello")
+    , Closed    False (Just "hello") True
+    , MovedOut  False "hello"  cookie
+    , MovedIn   False "hello2" cookie
+    , Deleted   False "hello2"
     ]
