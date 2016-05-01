@@ -38,10 +38,11 @@ import Prelude hiding (init)
 import Control.Monad
 import Control.Concurrent
 import Control.Exception as E (bracket, catch, mask_, SomeException)
+import qualified Data.ByteString as B
 import Data.Maybe
 import Data.Map (Map)
 import qualified Data.Map as Map
-import Foreign.C hiding (withCString, peekCString)
+import Foreign.C
 import Foreign.Marshal hiding (void)
 import Foreign.Ptr
 import Foreign.Storable
@@ -51,8 +52,6 @@ import GHC.IO.Handle.FD (fdToHandle')
 import GHC.IO.Device (IODeviceType(Stream))
 
 import System.Posix.Files
-import GHC.IO.Encoding (getFileSystemEncoding)
-import GHC.Foreign (withCString, peekCString)
 
 import System.INotify.Masks
 
@@ -71,45 +70,45 @@ instance Eq INotify where
 
 newtype Cookie = Cookie CUInt deriving (Eq,Ord)
 
-data FDEvent = FDEvent WD Masks CUInt{-Cookie-} (Maybe String) deriving (Eq, Show)
+data FDEvent = FDEvent WD Masks CUInt{-Cookie-} (Maybe B.ByteString) deriving (Eq, Show)
 
 data Event =
     -- | A file was accessed. @Accessed isDirectory file@
       Accessed
         { isDirectory :: Bool
-        , maybeFilePath :: Maybe FilePath
+        , maybeFilePath :: Maybe B.ByteString
         }
     -- | A file was modified. @Modified isDirectory file@
     | Modified
         { isDirectory :: Bool
-        , maybeFilePath :: Maybe FilePath
+        , maybeFilePath :: Maybe B.ByteString
         }
     -- | A files attributes where changed. @Attributes isDirectory file@
     | Attributes
         { isDirectory :: Bool
-        , maybeFilePath :: Maybe FilePath
+        , maybeFilePath :: Maybe B.ByteString
         }
     -- | A file was closed. @Closed isDirectory file wasWriteable@
     | Closed
         { isDirectory :: Bool
-        , maybeFilePath :: Maybe FilePath
+        , maybeFilePath :: Maybe B.ByteString
         , wasWriteable :: Bool
         }
     -- | A file was opened. @Opened isDirectory maybeFilePath@
     | Opened
         { isDirectory :: Bool
-        , maybeFilePath :: Maybe FilePath
+        , maybeFilePath :: Maybe B.ByteString
         }
     -- | A file was moved away from the watched dir. @MovedFrom isDirectory from cookie@
     | MovedOut
         { isDirectory :: Bool
-        , filePath :: FilePath
+        , filePath :: B.ByteString
         , moveCookie :: Cookie
         }
     -- | A file was moved into the watched dir. @MovedTo isDirectory to cookie@
     | MovedIn
         { isDirectory :: Bool
-        , filePath :: FilePath
+        , filePath :: B.ByteString
         , moveCookie :: Cookie
         }
     -- | The watched file was moved. @MovedSelf isDirectory@
@@ -119,12 +118,12 @@ data Event =
     -- | A file was created. @Created isDirectory file@
     | Created
         { isDirectory :: Bool
-        , filePath :: FilePath
+        , filePath :: B.ByteString
         }
     -- | A file was deleted. @Deleted isDirectory file@
     | Deleted
         { isDirectory :: Bool
-        , filePath :: FilePath
+        , filePath :: B.ByteString
         }
     -- | The file watched was deleted.
     | DeletedSelf
@@ -188,8 +187,7 @@ addWatch inotify@(INotify _ fd em _ _) masks fp cb = do
              Nothing
              (Just fp)
     let mask = joinMasks (map eventVarietyToMask masks)
-    enc <- getFileSystemEncoding
-    wd <- withCString enc fp $ \fp_c ->
+    wd <- withCString fp $ \fp_c ->
             throwErrnoIfMinus1 "addWatch" $
               c_inotify_add_watch (fromIntegral fd) fp_c mask
     let event = \e -> ignore_failure $ do
@@ -261,8 +259,7 @@ read_events h =
         nameM  <- if len == 0
                     then return Nothing
                     else do
-                        enc <- getFileSystemEncoding
-                        fmap Just $ peekCString enc ((#ptr struct inotify_event, name) ptr)
+                        fmap Just $ B.packCString ((#ptr struct inotify_event, name) ptr)
         let event_size = (#size struct inotify_event) + (fromIntegral len) 
             event = cEvent2Haskell (FDEvent wd mask cookie nameM)
         rest <- read_events' (ptr `plusPtr` event_size) (r - event_size)

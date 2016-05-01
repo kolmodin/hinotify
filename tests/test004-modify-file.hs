@@ -1,7 +1,10 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Main where
 
 import Control.Exception
 import Control.Monad
+
+import Data.String
 
 import System.Directory
 import System.IO
@@ -10,7 +13,7 @@ import System.INotify as INotify
 
 import Utils
 
-file :: String
+file :: IsString s => s
 file = "hello"
 
 write :: String -> IO ()
