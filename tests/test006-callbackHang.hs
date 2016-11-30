@@ -1,6 +1,7 @@
 module Main where
 
 import Control.Concurrent
+import Control.Exception
 
 import System.INotify as INotify
 import System.Timeout
@@ -19,13 +20,16 @@ main = maybe testFailure (const testSuccess) =<< timeout 1000000 doTest
 
 doTest :: IO ()
 doTest =
-    withTempDir $ \testPath -> do
-        inot <- initINotify
-        mvar1 <- newEmptyMVar
-        mvar2 <- newEmptyMVar
-        _ <- addWatch inot [AllEvents] testPath $ \_event -> do
-            putMVar mvar1 ()
-            takeMVar mvar2 -- hangs here
-        write testPath
-        takeMVar mvar1
-        killINotify inot -- should complete and kill all threads
+    withTempDir $ \testPath ->
+    bracket
+        initINotify
+        killINotify   -- should complete and kill all threads
+        $ \inot -> do
+            mvar1 <- newEmptyMVar
+            mvar2 <- newEmptyMVar
+            _ <- addWatch inot [AllEvents] testPath $ \_event -> do
+                putMVar mvar1 ()
+                takeMVar mvar2 -- hangs here
+            write testPath
+            takeMVar mvar1
+            killINotify inot
