@@ -32,4 +32,3 @@ doTest =
                 takeMVar mvar2 -- hangs here
             write testPath
             takeMVar mvar1
-            killINotify inot
