@@ -49,13 +49,9 @@ import Foreign.Ptr
 import Foreign.Storable
 import System.IO
 import System.IO.Error
-#if __GLASGOW_HASKELL__ >= 612
-import GHC.IO.Handle.FD (fdToHandle')
+import GHC.IO.FD as FD (mkFD)
+import GHC.IO.Handle.FD (mkHandleFromFD)
 import GHC.IO.Device (IODeviceType(Stream))
-#else
-import GHC.Handle
-import System.Posix.Internals
-#endif
 import System.Posix.Files
 import GHC.IO.Encoding (getFileSystemEncoding)
 import GHC.Foreign (withCString, peekCString)
@@ -177,16 +173,19 @@ instance Show Cookie where
 
 initINotify :: IO INotify
 initINotify = do
-    fd <- throwErrnoIfMinus1 "initINotify" c_inotify_init
-    let desc = showString "<inotify handle, fd=" . shows fd $ ">"
-#if __GLASGOW_HASKELL__ < 608
-    h <-  openFd (fromIntegral fd) (Just Stream) False{-is_socket-} desc ReadMode True{-binary-}
-#else
-    h <-  fdToHandle' (fromIntegral fd) (Just Stream) False{-is_socket-} desc ReadMode True{-binary-}
-#endif
+    fdint <- throwErrnoIfMinus1 "initINotify" c_inotify_init
+    (fd,fd_type) <- FD.mkFD fdint ReadMode (Just (Stream,0,0))
+            False{-is_socket-}
+            False{-is_nonblock-}
+    h <- mkHandleFromFD fd fd_type
+           (showString "<inotify handle, fd=" . shows fd $ ">")
+           ReadMode
+           True  -- make non-blocking.  Otherwise reading uses select(), which
+                 -- can fail when there are >=1024 FDs
+           Nothing -- no encoding, so binary
     em <- newMVar Map.empty
     (tid1, tid2) <- inotify_start_thread h em
-    return (INotify h fd em tid1 tid2)
+    return (INotify h fdint em tid1 tid2)
 
 addWatch :: INotify -> [EventVariety] -> FilePath -> (Event -> IO ()) -> IO WatchDescriptor
 addWatch inotify@(INotify _ fd em _ _) masks fp cb = do
@@ -352,7 +351,7 @@ cancelWait a = do cancel a; void $ waitCatch a
 
 withINotify :: (INotify -> IO a) -> IO a
 withINotify = bracket initINotify killINotify
-        
+
 foreign import ccall unsafe "sys/inotify.h inotify_init" c_inotify_init :: IO CInt
 foreign import ccall unsafe "sys/inotify.h inotify_add_watch" c_inotify_add_watch :: CInt -> CString -> CUInt -> IO CInt
 foreign import ccall unsafe "sys/inotify.h inotify_rm_watch" c_inotify_rm_watch :: CInt -> CInt -> IO CInt
