@@ -331,7 +331,7 @@ inotify_start_thread h em = do
           Nothing -> putStrLn "runHandler: couldn't find handler" -- impossible?
           Just handler -> handler event
 
-    logFailure name io = io `catch` \e ->
+    logFailure name io = io `E.catch` \e ->
        case e of
          _ | Just ThreadKilled{} <- fromException e -> return ()
            | otherwise -> hPutStrLn stderr (name ++ " dying: " ++ show e)
