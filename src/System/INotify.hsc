@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  System.INotify
@@ -37,7 +38,8 @@ module System.INotify
 import Prelude hiding (init)
 import Control.Monad
 import Control.Concurrent
-import Control.Exception as E (bracket, catch, mask_, SomeException)
+import Control.Concurrent.Async
+import Control.Exception as E hiding (mask)
 import Data.Maybe
 import Data.Map (Map)
 import qualified Data.Map as Map
@@ -47,11 +49,13 @@ import Foreign.Ptr
 import Foreign.Storable
 import System.IO
 import System.IO.Error
-import GHC.IO.Handle.FD (fdToHandle')
-import GHC.IO.Device (IODeviceType(Stream))
 
 import System.Posix.ByteString.FilePath
 import System.Posix.Files.ByteString
+
+import GHC.IO.FD as FD (mkFD)
+import GHC.IO.Handle.FD (mkHandleFromFD)
+import GHC.IO.Device (IODeviceType(Stream))
 
 import System.INotify.Masks
 
@@ -62,7 +66,7 @@ type Masks = CUInt
 type EventMap = Map WD (Event -> IO ())
 type WDEvent = (WD, Event)
 
-data INotify = INotify Handle FD (MVar EventMap) ThreadId ThreadId
+data INotify = INotify Handle FD (MVar EventMap) (Async ()) (Async ())
 data WatchDescriptor = WatchDescriptor INotify WD deriving Eq
 
 instance Eq INotify where
@@ -170,12 +174,19 @@ instance Show Cookie where
 
 initINotify :: IO INotify
 initINotify = do
-    fd <- throwErrnoIfMinus1 "initINotify" c_inotify_init
-    let desc = showString "<inotify handle, fd=" . shows fd $ ">"
-    h <-  fdToHandle' (fromIntegral fd) (Just Stream) False{-is_socket-} desc ReadMode True{-binary-}
+    fdint <- throwErrnoIfMinus1 "initINotify" c_inotify_init
+    (fd,fd_type) <- FD.mkFD fdint ReadMode (Just (Stream,0,0))
+            False{-is_socket-}
+            False{-is_nonblock-}
+    h <- mkHandleFromFD fd fd_type
+           (showString "<inotify handle, fd=" . shows fd $ ">")
+           ReadMode
+           True  -- make non-blocking.  Otherwise reading uses select(), which
+                 -- can fail when there are >=1024 FDs
+           Nothing -- no encoding, so binary
     em <- newMVar Map.empty
     (tid1, tid2) <- inotify_start_thread h em
-    return (INotify h fd em tid1 tid2)
+    return (INotify h fdint em tid1 tid2)
 
 addWatch :: INotify -> [EventVariety] -> RawFilePath -> (Event -> IO ()) -> IO WatchDescriptor
 addWatch inotify@(INotify _ fd em _ _) masks fp cb = do
@@ -226,10 +237,12 @@ addWatch inotify@(INotify _ fd em _ _) masks fp cb = do
             AllEvents -> inAllEvents
 
     ignore_failure :: IO () -> IO ()
-    ignore_failure action = mask_ (action `E.catch` ignore)
+    ignore_failure action = action `E.catch` ignore
       where
       ignore :: SomeException -> IO ()
-      ignore _ = return ()
+      ignore e
+        | Just ThreadKilled{} <- fromException e = throwIO e
+        | otherwise = return ()
 
 removeWatch :: WatchDescriptor -> IO ()
 removeWatch (WatchDescriptor (INotify _ fd _ _ _) wd) = do
@@ -288,12 +301,12 @@ read_events h =
         isDir = isSet inIsdir
         isSet bits = maskIsSet bits mask
         name = fromJust nameM
-       
-inotify_start_thread :: Handle -> MVar EventMap -> IO (ThreadId, ThreadId)
+
+inotify_start_thread :: Handle -> MVar EventMap -> IO (Async (), Async ())
 inotify_start_thread h em = do
     chan_events <- newChan
-    tid1 <- forkIO (dispatcher chan_events)
-    tid2 <- forkIO (start_thread chan_events)
+    tid1 <- async (logFailure "dispatcher" (dispatcher chan_events))
+    tid2 <- async (logFailure "start_thread" (start_thread chan_events))
     return (tid1,tid2)
     where
     start_thread :: Chan [WDEvent] -> IO ()
@@ -317,15 +330,27 @@ inotify_start_thread h em = do
           Nothing -> putStrLn "runHandler: couldn't find handler" -- impossible?
           Just handler -> handler event
 
+    logFailure name io = io `E.catch` \e ->
+       case e of
+         _ | Just ThreadKilled{} <- fromException e -> return ()
+           | otherwise -> hPutStrLn stderr (name ++ " dying: " ++ show e)
+
 killINotify :: INotify -> IO ()
 killINotify (INotify h _ _ tid1 tid2) =
-    do killThread tid1
-       killThread tid2
+    do cancelWait tid1
+       cancelWait tid2
        hClose h
+
+cancelWait :: Async a -> IO ()
+##if MIN_VERSION_async(2,1,1)
+cancelWait = cancel
+##else
+cancelWait a = do cancel a; void $ waitCatch a
+##endif
 
 withINotify :: (INotify -> IO a) -> IO a
 withINotify = bracket initINotify killINotify
-        
+
 foreign import ccall unsafe "sys/inotify.h inotify_init" c_inotify_init :: IO CInt
 foreign import ccall unsafe "sys/inotify.h inotify_add_watch" c_inotify_add_watch :: CInt -> CString -> CUInt -> IO CInt
 foreign import ccall unsafe "sys/inotify.h inotify_rm_watch" c_inotify_rm_watch :: CInt -> CInt -> IO CInt
