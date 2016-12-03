@@ -1,6 +1,23 @@
 hinotify
 ======
 
+hinotify-0.3.9
+--------------
+
+Patches contributed by Simon Marlow marlowsd@gmail.com
+
+- Don't run callbacks in `mask_`.
+
+  It prevented the callback threads from receiving StackOverflow, amongst other things.
+
+- Synchronous `killThread`.
+
+  `killThread` will now wait for the callback dispatcher threads to finish.
+
+- Bug fixes
+
+  https://github.com/kolmodin/hinotify/pull/23
+
 hinotify-0.3.8
 --------------
 
