@@ -15,7 +15,7 @@
 -- Use 'initINotify' to get a 'INotify', then use 'addWatch' to
 -- add a watch on a file or directory. Select which events you're interested
 -- in with 'EventVariety', which corresponds to the 'Event' events.
--- 
+--
 -- Use 'removeWatch' once you don't want to watch a file any more.
 --
 -----------------------------------------------------------------------------
@@ -163,7 +163,7 @@ data EventVariety
 
 instance Show INotify where
     show (INotify _ fd _ _ _) =
-        showString "<inotify fd=" . 
+        showString "<inotify fd=" .
         shows fd $ ">"
 
 instance Show WatchDescriptor where
@@ -241,7 +241,11 @@ addWatch inotify@(INotify _ fd em _ _) masks fp cb = do
       where
       ignore :: SomeException -> IO ()
       ignore e
+##if MIN_VERSION_async(2,2,1)
+        | Just AsyncCancelled <- fromException e = throwIO e
+##else
         | Just ThreadKilled{} <- fromException e = throwIO e
+##endif
         | otherwise = return ()
 
 removeWatch :: WatchDescriptor -> IO ()
@@ -255,7 +259,7 @@ rm_watch (INotify _ _ em _ _) wd =
     modifyMVar_ em (return . Map.delete wd)
 
 read_events :: Handle -> IO [WDEvent]
-read_events h = 
+read_events h =
     let maxRead = 16385 in
     allocaBytes maxRead $ \buffer -> do
         _ <- hWaitForInput h (-1)  -- wait forever
@@ -273,11 +277,11 @@ read_events h =
                     then return Nothing
                     else do
                         fmap Just $ peekFilePath ((#ptr struct inotify_event, name) ptr)
-        let event_size = (#size struct inotify_event) + (fromIntegral len) 
+        let event_size = (#size struct inotify_event) + (fromIntegral len)
             event = cEvent2Haskell (FDEvent wd mask cookie nameM)
         rest <- read_events' (ptr `plusPtr` event_size) (r - event_size)
         return (event:rest)
-    cEvent2Haskell :: FDEvent 
+    cEvent2Haskell :: FDEvent
                -> WDEvent
     cEvent2Haskell fdevent@(FDEvent wd mask cookie nameM)
         = (wd, event)
@@ -323,7 +327,7 @@ inotify_start_thread h em = do
     runHandler (_,  e@QOverflow) = do -- send overflows to all handlers
         handlers <- readMVar em
         mapM_ ($ e) (Map.elems handlers)
-    runHandler (wd, event) = do 
+    runHandler (wd, event) = do
         handlers <- readMVar em
         let handlerM = Map.lookup wd handlers
         case handlerM of
@@ -332,7 +336,11 @@ inotify_start_thread h em = do
 
     logFailure name io = io `E.catch` \e ->
        case e of
+##if MIN_VERSION_async(2,2,1)
+         _ | Just AsyncCancelled <- fromException e -> return ()
+##else
          _ | Just ThreadKilled{} <- fromException e -> return ()
+##endif
            | otherwise -> hPutStrLn stderr (name ++ " dying: " ++ show e)
 
 killINotify :: INotify -> IO ()

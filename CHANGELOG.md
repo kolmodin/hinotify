@@ -1,6 +1,11 @@
 hinotify
 ======
 
+hinotify-0.3.10
+---------------
+
+- Allow async-2.2, with necessary changes to exception handling
+
 hinotify-0.3.9
 --------------
 
