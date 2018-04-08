@@ -1,5 +1,5 @@
 name:               hinotify
-version:            0.3.9
+version:            0.3.10
 build-type:         Simple
 synopsis:           Haskell binding to inotify
 description:
