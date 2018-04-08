@@ -5,6 +5,10 @@ hinotify-0.3.10
 ---------------
 
 - Allow async-2.2.
+- Use `RawFilePath` (`ByteString`) for filenames, from `unix` package.
+
+  Changes the `Event` type and `addWatch` function.
+
 
 hinotify-0.3.9
 --------------
