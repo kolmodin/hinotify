@@ -7,7 +7,8 @@ description:
     allowing applications to subscribe to notifications when a file is
     accessed or modified.
 category:           System
-homepage:           https://github.com/kolmodin/hinotify.git
+homepage:           https://github.com/kolmodin/hinotify
+bug-reports:        https://github.com/kolmodin/hinotify/issues
 license:            BSD3
 license-file:       LICENSE
 author:             Lennart Kolmodin
