@@ -34,6 +34,9 @@ library
     includes: sys/inotify.h
     hs-source-dirs: src
 
+    if os(freebsd) || os(openbsd)
+      extra-libraries: inotify
+
 test-suite test001
     type: exitcode-stdio-1.0
     default-language: Haskell2010
