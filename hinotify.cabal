@@ -34,7 +34,7 @@ library
     includes: sys/inotify.h
     hs-source-dirs: src
 
-    if os(freebsd) || os(openbsd)
+    if os(freebsd) || os(netbsd) || os(openbsd)
       extra-libraries: inotify
 
 test-suite test001
